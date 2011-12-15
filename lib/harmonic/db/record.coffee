@@ -1,6 +1,5 @@
 #--
 # Copyright (c) 2011 Jae Kwon 
-# MIT License
 #++
 
 mongo = require './mongo'
