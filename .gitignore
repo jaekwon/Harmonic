@@ -1,0 +1,7 @@
+*.swp
+*.pyc
+logs/*
+.sass-cache
+.DS_Store
+node_modules
+.deadpool
