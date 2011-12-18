@@ -1,13 +1,22 @@
 {spawn, exec} = require 'child_process'
-log = console.log
+
+config = require 'config'
 harmonic = require 'harmonic'
+_ = require 'underscore'
+log = console.log
 
 task 'mongo', ->
-  harmonic.db.mongo.with_init (err) ->
+  # find all models from apps
+  models = []
+  for appname, apploc of config.apps
+    app = require(apploc)
+    models.push(app.models) if app.models?
+  # ensure indices for these models
+  harmonic.db.mongo.ensure_indices_for models, (err, values) ->
     if err?
       log "ERROR! #{err}"
     else
-      log "Done!"
+      log "Done! #{values}"
     harmonic.db.mongo.shutdown()
 
 run = (args...) ->

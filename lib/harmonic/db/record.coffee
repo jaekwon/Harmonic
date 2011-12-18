@@ -21,13 +21,13 @@ class RecordValidator extends Validator
 
 # A very light model base class around MongoDB.
 # It's meant to be subclassed.
-# 1. override collection_name
+# 1. override collection
 # 2. override the validate function
 # NOTE: the validate function does not get called automatically
 class Record
 
   # override in your subclass
-  @collection_name: undefined
+  @collection: undefined
 
   # override in your subclass
   validate: ->
@@ -41,7 +41,7 @@ class Record
     # the dict returned from mongodb after an update operation
     @_returned_data = undefined
 
-  # does not validate.
+  # NOTE: does not validate.
   save: (cb) ->
     this.coll (coll) =>
       coll.insert @data, {}, (err, it) =>
@@ -49,28 +49,30 @@ class Record
         if cb
           cb(err, if err? undefined else this)
 
-  # does not validate.
+  # NOTE: does not validate.
   @create: (data, cb) ->
     rec = new this(data)
     rec.save(cb)
 
-  # get the underlying collection
+  # Get the underlying collection
   @coll: (cb) ->
-    if not @collection_name?
-      throw new Error("collection_name not defined for record '#{this}'")
-    mongo.with @collection_name, (coll) ->
+    if not @collection?
+      throw new Error("collection not defined for record '#{this}'")
+    mongo.with @collection, (coll) ->
       try
         wcoll = new ConnectionWrapper(coll, mongo.on_error)
         cb(wcoll)
       catch err
         mongo.on_error(err)
 
-  # get the underlying collection (instance method)
+  # Get the underlying collection (instance method)
   coll: (cb) ->
     this.constructor.coll(cb)
 
-  # find exactly one.
-  # if none or more than one is found, you'll get an error.
+  # Find exactly one.
+  # If none or more than one is found, you'll get an error.
+  # query_data: The query data as expected by node-mongodb-native.
+  #             Or, a string to find by id.
   @findOne: (query_data, cb) ->
     _RecordClass = this
     this.coll (coll) ->

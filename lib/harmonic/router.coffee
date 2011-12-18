@@ -31,6 +31,7 @@ class exports.Route
 
   # @routedata:
   #   name:         A globally unique name for the route.
+  #   name_prefix:  Prepended to the name.
   #   path:         A regexp type with :capture tokens. See 'path_prefix' below.
   #   path_prefix:  Prepended to the path.
   #   reverse:      A function to construct a path from arguments. (optional)
@@ -39,13 +40,10 @@ class exports.Route
   #   wrap:         Decorators for the fn, much like connect middleware.
   #                 Should be 'wrappers' but I chose a four letter word. (optional)
   #   NOTE -- both fn and wrappers get bound to this Route instance.
-  #
-  # @defaults:      Default values as passed in via Router.extend_routes.
-  #                 templates:, path_prefix: usually go here.
-  constructor: (@router, @defaults, @routedata) ->
-    _.extend(this, @defaults)
+  constructor: (@router, @routedata) ->
     _.extend(this, @routedata)
     @path = "#{@path_prefix}#{@path}" if @path_prefix
+    @name = "#{@name_prefix}#{@name}" if @name_prefix
     @xregexp ||= new XRegExp('^'+@path.replace(/:([^\/]+)/g, '(?<$1>[^\/]+)')+'$')
 
     # construct an array of functions to call in sequence
@@ -83,11 +81,9 @@ class exports.Route
 # Main class. Handles an array of routes.
 class exports.Router
 
-  constructor: (defaults, routedata_a...) ->
+  constructor: ->
     @routes = []
     @named_routes = {}
-    if routedata_a.length > 0
-      this.extend_routes(defaults, routedata_a...)
     return this
 
   # Main function that serves the request
@@ -167,12 +163,25 @@ class exports.Router
       return reversed
 
   # A function to append more routes.
-  # defaults: default routedata... the 'templates' key belongs here.
-  # routedata_a: an array of routedata
-  extend_routes: (defaults, routedata_a...) =>
-    for routedata in routedata_a
-      route = new exports.Route(this, defaults, routedata)
-      if route.name
-        assert.equal(@named_routes[route.name], undefined, "the route name #{route.name} is duplicate")
-        @named_routes[route.name] = route
-      @routes.push(route)
+  # routes_data:
+  #   name_prefix:  the keys of routes will be prefixed by "#{routes_data.name_prefix}:" (required)
+  #   path_prefix:  if present, paths in routes will be prepended by this (optional)
+  #   templates:    if present, res.render_layout will be set accordingly (optional)
+  #   routes:       an object of {route_name: route_object, ...}
+  extend_routes: (routes_data) =>
+    assert.ok(routes_data.name_prefix?)
+    default_data =
+      name_prefix: routes_data.name_prefix
+      path_prefix: routes_data.path_prefix
+      templates:   routes_data.templates
+    for name, route of routes_data.routes
+      route_data = _.extend( _.clone(default_data), route )
+      route = new exports.Route(this, route_data)
+      this.add_route(route)
+
+  # Add a Route object
+  add_route: (route) =>
+    if route.name
+      assert.equal(@named_routes[route.name], undefined, "The route name '#{route.name}' is not unique!")
+      @named_routes[route.name] = route
+    @routes.push(route)

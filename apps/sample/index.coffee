@@ -1,36 +1,33 @@
 harmonic = require 'harmonic'
-templates = new harmonic.templates.Templar(require, './templates', '../../templates')
 
-Page = require('./models').Page
+@models = {Page} = require('./models')
+@templates = new harmonic.templates.Templar(require, './templates', '../../templates')
+@path_prefix = '/sample'
+@routes =
+  index:
+    path: '', fn: (req, res) ->
+      switch req.method
+        when 'GET'
+          res.render_layout('index')
 
-exports.extend_routes = (router) ->
-  router.extend_routes({templates: templates, path_prefix: '/sample'},
-    {
-      name: 'sample:index'
-      path: '', fn: (req, res) ->
-        switch req.method
-          when 'GET'
-            res.render_layout('index')
-    },{
-      name: 'sample:list'
-      path: '/list', fn: (req, res) ->
-        switch req.method
-          when 'GET'
-            res.render_layout('list', null, [])
-    },{
-      name: 'sample:show'
-      path: '/show', fn: (req, res) ->
-        switch req.method
-          when 'GET'
-            res.render_layout('show', null)
-    },{
-      name: 'sample:create'
-      path: '/create', fn: (req, res) ->
-        switch req.method
-          when 'GET'
-            res.render_layout('create')
-          when 'POST'
-            # TODO
-            res.render_layout('create')
-    }
-  )
+  list:
+    path: '/list', fn: (req, res) ->
+      switch req.method
+        when 'GET'
+          res.render_layout('list', null, [])
+
+  show:
+    path: '/show/:page_id', fn: (req, res) ->
+      switch req.method
+        when 'GET'
+          Page.findOne req.path.page_id
+          res.render_layout('show', null)
+
+  create:
+    path: '/create', fn: (req, res) ->
+      switch req.method
+        when 'GET'
+          res.render_layout('create')
+        when 'POST'
+          # TODO
+          res.render_layout('create')

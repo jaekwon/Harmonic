@@ -2,7 +2,6 @@
 # Copyright (c) 2011 Jae Kwon 
 #++
 
-mongodb = require('mongodb')
 assert = require('assert')
 
 # if the last arg is a function,
@@ -33,11 +32,11 @@ class exports.ConnectionWrapper
       return new exports.CursorWrapper(@conn.find(arguments...), @errcb)
 
   # bind all the other methods
-  for method_name, method of mongodb.Collection.prototype
-    do (method_name, method) =>
-      if method_name == 'find' then return
-      this::[method_name] = ->
-        method.apply(@conn, make_arguments_safe(arguments, @errcb))
+  #for method_name, method of mongodb.Collection.prototype
+  #  do (method_name, method) =>
+  #    if method_name == 'find' then return
+  #    this::[method_name] = ->
+  #      method.apply(@conn, make_arguments_safe(arguments, @errcb))
 
 class exports.CursorWrapper
   constructor: (@cursor, @errcb) ->

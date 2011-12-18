@@ -8,6 +8,7 @@ templates = new harmonic.Templar(require)
 connect = require 'connect'
 http = require 'http'
 logger = require('nogg').logger('app')
+_ = require 'underscore'
 
 # TODO move to an init script
 if config.catch_uncaught_errors
@@ -18,27 +19,16 @@ if config.catch_uncaught_errors
     logger.error err.stack
     logger.error "^^^^^^^^^^^^^^^^"
 
-# default routes.
-router = new harmonic.Router({templates: templates},
-  {
-    path: '/', fn: (req, res) ->
-      switch req.method
-        when 'GET'
-          res.render_layout('index')
-  },{
-    path: '/p/:page', fn: (req, res) ->
-      switch req.method
-        when 'GET'
-          res.render_layout("/pages/#{req.path.page}")
-  },{
-    path: 'ERROR/404', fn: (req, res) ->
-      res.reply 404, {status: 'error'}, templates.render_layout('error404')
-  }
-)
+# create router
+router = new harmonic.Router()
 
 # add applications
-require('apps/auth').extend_routes(router)
-require('apps/sample').extend_routes(router)
+for appname, apploc of config.apps
+  do (appname, apploc) ->
+    app = require(apploc)
+    routes_data = {name_prefix: appname+":"}
+    _.extend(routes_data, require(apploc))
+    router.extend_routes(routes_data)
 
 # init server
 http.createServer(connect()
@@ -50,8 +40,7 @@ http.createServer(connect()
   .use(connect.session({ cookie: { maxAge: 1000*60*60*24*30 }}))
   .use(connect.query())
   .use(connect.bodyParser())
-  .use(require('apps/auth/middleware')()) # consider installing middleware via extend_routes, or similar.
-                                          # or, keep things as is, because explicit is the philosophy.
+  .use(require('apps/auth/middleware')()) # TODO consider auto-installation of middleware
   .use(router.serve)
 ).listen(config.server.port, config.server.host)
 
