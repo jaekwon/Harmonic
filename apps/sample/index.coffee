@@ -2,32 +2,32 @@ harmonic = require 'harmonic'
 
 @models = {Page} = require('./models')
 @templates = new harmonic.templates.Templar(require, './templates', '../../templates')
-@path_prefix = '/sample'
+@pathPrefix = '/sample'
 @routes =
   index:
     path: '', fn: (req, res) ->
       switch req.method
         when 'GET'
-          res.render_layout('index')
+          res.renderLayout('index')
 
   list:
     path: '/list', fn: (req, res) ->
       switch req.method
         when 'GET'
-          res.render_layout('list', null, [])
+          res.renderLayout('list', null, [])
 
   show:
-    path: '/show/:page_id', fn: (req, res) ->
+    path: '/show/:pageId', fn: (req, res) ->
       switch req.method
         when 'GET'
-          Page.findOne req.path.page_id
-          res.render_layout('show', null)
+          Page.findOne req.path.pageId
+          res.renderLayout('show', null)
 
   create:
     path: '/create', fn: (req, res) ->
       switch req.method
         when 'GET'
-          res.render_layout('create')
+          res.renderLayout('create')
         when 'POST'
           # TODO
-          res.render_layout('create')
+          res.renderLayout('create')

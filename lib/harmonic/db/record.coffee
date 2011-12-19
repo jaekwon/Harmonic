@@ -13,9 +13,9 @@ class RecordValidator extends Validator
   constructor: (@record) ->
   error: (msg) ->
     (@record.errors[@fieldname] ||= []).push(msg)
-  check_field: (@fieldname, message) ->
+  checkField: (@fieldname, message) ->
     return this.check(@record.data[@fieldname], message)
-  check_other: (value, message) ->
+  checkOther: (value, message) ->
     @fieldname = null
     return this.check(value, message)
 
@@ -26,12 +26,15 @@ class RecordValidator extends Validator
 # NOTE: the validate function does not get called automatically
 class Record
 
+  # so we know that subclasses inherit from Record
+  _recordPrototype: 'Record'
+
   # override in your subclass
   @collection: undefined
 
   # override in your subclass
   validate: ->
-    # e.g. @v.check_field('text').len(3, 1024)
+    # e.g. @v.checkField('text').len(3, 1024)
 
   constructor: (@data) ->
     # fieldname -> error
@@ -39,13 +42,13 @@ class Record
     @errors = {}
     @v = new RecordValidator(this)
     # the dict returned from mongodb after an update operation
-    @_returned_data = undefined
+    @_returnedData = undefined
 
   # NOTE: does not validate.
   save: (cb) ->
     this.coll (coll) =>
       coll.insert @data, {}, (err, it) =>
-        @_returned_data = it
+        @_returnedData = it
         if cb
           cb(err, if err? undefined else this)
 
@@ -60,10 +63,10 @@ class Record
       throw new Error("collection not defined for record '#{this}'")
     mongo.with @collection, (coll) ->
       try
-        wcoll = new ConnectionWrapper(coll, mongo.on_error)
+        wcoll = new ConnectionWrapper(coll, mongo.onError)
         cb(wcoll)
       catch err
-        mongo.on_error(err)
+        mongo.onError(err)
 
   # Get the underlying collection (instance method)
   coll: (cb) ->
@@ -71,12 +74,12 @@ class Record
 
   # Find exactly one.
   # If none or more than one is found, you'll get an error.
-  # query_data: The query data as expected by node-mongodb-native.
+  # queryData: The query data as expected by node-mongodb-native.
   #             Or, a string to find by id.
-  @findOne: (query_data, cb) ->
+  @findOne: (queryData, cb) ->
     _RecordClass = this
     this.coll (coll) ->
-      coll.find(query_data).limit(2).toArray (err, items) ->
+      coll.find(queryData).limit(2).toArray (err, items) ->
         if err?
           cb(err, null)
           return

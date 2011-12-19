@@ -5,24 +5,24 @@
 config = require 'config'
 logger = require('nogg').logger('harmonic.db.mongo')
 Mongolian = require 'mongolian'
-async = require 'async'
-_ = require 'underscore'
+assert = require 'assert'
 
 # Configuration
 do ->
   if config.database.uri
+    assert.ok(config.database.uri.indexOf('://') >= 0, "config.database.uri should include protocol://")
     parts = require('url').parse(config.database.uri)
-    config.database.server_uri ||= (-> "#{@protocol}://#{@host}").call parts
-    config.database.default_db ||= parts.pathname[1...] if not config.database.db?
+    config.database.serverUri ||= (-> "#{@protocol}//#{@host}").call parts
+    config.database.defaultDb ||= parts.pathname[1...] if not config.database.db?
 
 # Create global server.
-mongolian_logger = require('nogg').logger('harmonic.db.mongolian')
-server = new Mongolian(config.database.server_uri,
+mongolianLogger = require('nogg').logger('harmonic.db.mongolian')
+server = new Mongolian(config.database.serverUri,
   log:
-    debug: mongolian_logger.debug
-    info:  mongolian_logger.info
-    warn:  mongolian_logger.warn
-    error: mongolian_logger.error
+    debug: mongolianLogger.debug
+    info:  mongolianLogger.info
+    warn:  mongolianLogger.warn
+    error: mongolianLogger.error
 )
 
 # Close all databases.
@@ -31,21 +31,20 @@ exports.shutdown = ->
   server.close()
   logger.info "all mongo db connections shut down!"
 
-# Ensure indices for all the given models
-exports.ensure_indices_for = (models, callback) ->
-  # For each model in series...
-  async.forEach models, (model, next) ->
-    if models.index?
-      index_options = models.index
-      if index_options instanceof Array
-        [index, options] = index_options
-      else
-        [index, options] = [index_options, null]
-      if '.' in models.collection
-        [db_name, coll_name] = models.collection.split '.'
-      else
-        [db_name, coll_name] = [config.database.default_db, models.collection]
-      collection = server.db(db_name).getCollection(coll_name)
-      collection.ensureIndex index, options, next
-  , (err, value) ->
-    callback(err, value)
+# Ensure indices for all the given model
+# model:          A subclass of Record
+#   collection:   The name of the collection
+#   index:        List of ensureIndex args
+exports.ensureIndicesFor = (model, callback) ->
+  if model.index?
+    indexOptions = model.index
+    if indexOptions instanceof Array
+      [index, options] = indexOptions
+    else
+      [index, options] = [indexOptions, null]
+    if '.' in model.collection
+      [dbName, collName] = model.collection.split '.'
+    else
+      [dbName, collName] = [config.database.defaultDb, model.collection]
+    collection = server.db(dbName).getCollection(collName)
+    collection.ensureIndex index, options, callback

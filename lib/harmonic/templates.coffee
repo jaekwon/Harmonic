@@ -9,69 +9,69 @@ coffeescript = require 'coffee-script'
 _ = require 'underscore'
 
 # a function to add a digest nonce parameter to a static file to help with client cache busting
-_static_file_cache = {}
-exports.static_file = static_file = (filepath) ->
-  if not _static_file_cache[filepath]
+_staticFileCache = {}
+exports.staticFile = staticFile = (filepath) ->
+  if not _staticFileCache[filepath]
     fullfilepath = "static/#{filepath}"
     nonce = require('hashlib').md5(require('fs').statSync(fullfilepath).mtime)[1..10]
-    logger.debug "SYNC CALL: static_file, nonce = #{nonce}"
-    _static_file_cache[filepath] = "/#{fullfilepath}?v=#{nonce}"
-  return _static_file_cache[filepath]
+    logger.debug "SYNC CALL: staticFile, nonce = #{nonce}"
+    _staticFileCache[filepath] = "/#{fullfilepath}?v=#{nonce}"
+  return _staticFileCache[filepath]
 
 # Main templates rendering class.
 # 
 # require:
 #   This require function will be used to import the template file
-# templates_dirs:
+# templatesDirs:
 #   Specify the order in which Templar should look for files.
 #   The directory must be relative to @require.
 #
 # Layout files will be searched for in the layouts directory.
 class exports.Templar
 
-  constructor: (@require, @templates_dirs...) ->
-    if @templates_dirs.length == 0
-      @templates_dirs = ['./templates']
-    @template_mtimes = {}
+  constructor: (@require, @templatesDirs...) ->
+    if @templatesDirs.length == 0
+      @templatesDirs = ['./templates']
+    @templateMtimes = {}
     @CMContext = coffeemugg.CMContext.extend({
       require: @require
       _render: @render
       #render: gets defined dynamically to pass on options
-      static_file: static_file
+      staticFile: staticFile
       site: config.site
     })
 
   # Filename can be relative.
-  template_require: (filename) ->
+  templateRequire: (filename) ->
     # TODO cache
-    for templates_dir in @templates_dirs
+    for templatesDir in @templatesDirs
       try
-        path = @require.resolve("#{templates_dir}/#{filename}.coffee")
+        path = @require.resolve("#{templatesDir}/#{filename}.coffee")
         break
       catch err
         # pass
     if not path?
-      throw new Error("Could not find template '#{filename}' given template_dirs #{@templates_dirs}")
+      throw new Error("Could not find template '#{filename}' given templateDirs #{@templatesDirs}")
 
     # Auto-reloading of templates for developement
     if config.debug
       stat = require('fs').statSync(path)
-      if not @template_mtimes[path] or @template_mtimes[path] < stat.mtime
+      if not @templateMtimes[path] or @templateMtimes[path] < stat.mtime
         logger.info "loading templates/#{filename}.coffee template..."
-        @template_mtimes[path] = stat.mtime
+        @templateMtimes[path] = stat.mtime
         delete require.cache[path]
 
-    tmpl_module = require(path)
+    tmplModule = require(path)
     # validate this module
     # TODO cache
-    if not tmpl_module.template?
+    if not tmplModule.template?
       throw new Error "The template file #{template} does not export a 'template' coffeemugg function"
-    return tmpl_module
+    return tmplModule
 
   # Main render function.
   #
   # options:
-  #   context:  Volatile context values like req, body_template, etc.
+  #   context:  Volatile context values like req, bodyTemplate, etc.
   #             (more static context should be passed in during Templar initialization)
   #             NOTE context.context circular reference will be added.
   # template: The template function
@@ -91,28 +91,28 @@ class exports.Templar
       @render(template_, options_, args_...)
 
     # get template
-    tmpl_module = @template_require(template)
+    tmplModule = @templateRequire(template)
 
     # sass plugin TODO
     # coffeescript plugin
-    if tmpl_module.coffeescript and not tmpl_module['_compiled_coffeescript']?
+    if tmplModule.coffeescript and not tmplModule['_compiledCoffeescript']?
       try
-        if typeof tmpl_module.coffeescript == 'function'
-          tmpl_module['_compiled_coffeescript'] = "(#{''+tmpl_module.coffeescript})();"
+        if typeof tmplModule.coffeescript == 'function'
+          tmplModule['_compiledCoffeescript'] = "(#{''+tmplModule.coffeescript})();"
         else
-          tmpl_module['_compiled_coffeescript'] = coffeescript.compile(tmpl_module.coffeescript)
+          tmplModule['_compiledCoffeescript'] = coffeescript.compile(tmplModule.coffeescript)
       catch err
         logger.error "err in compiling coffeescript for template '#{template}': " + err
         return if config.debug then throw err else undefined
-    cm = new @CMContext(format: config.debug, trample_warning: config.debug, context: context)
+    cm = new @CMContext(format: config.debug, trampleWarning: config.debug, context: context)
     
     html = ''
     try
-      html += cm.render_contents(tmpl_module.template, args...).toString()
-      if tmpl_module._compiled_coffeescript
-        html += "\n<script type='text/javascript'>#{tmpl_module._compiled_coffeescript}</script>"
-      if tmpl_module._compiled_sass
-        html += "\n<style type='text/css'>#{tmpl_module._compiled_sass}</style>"
+      html += cm.renderContents(tmplModule.template, args...).toString()
+      if tmplModule._compiledCoffeescript
+        html += "\n<script type='text/javascript'>#{tmplModule._compiledCoffeescript}</script>"
+      if tmplModule._compiledSass
+        html += "\n<style type='text/css'>#{tmplModule._compiledSass}</style>"
     catch err
       logger.error "err in rendering template '#{template}': " + err
       return if config.debug then throw err else undefined
@@ -122,23 +122,23 @@ class exports.Templar
   #
   # template:   The template to render, not the layout.
   # options:
-  #   context:  Volatile context values like req, body_template, etc.
+  #   context:  Volatile context values like req, bodyTemplate, etc.
   #             (more static context should be passed in during Templar initialization)
   #             NOTE context.context circular reference will be added.
   #   layout:   The layout to use, default 'layouts/default'
   # args:       Args to pass to above template
-  render_layout: (template, options, args...) =>
+  renderLayout: (template, options, args...) =>
     layout = options?.layout || 'layouts/default'
 
     # this will be the actual context for the layout
     # as well as the template
-    layout_context = {
+    layoutContext = {
       args: args
       layout: layout
       template: template
     }
 
     # caller's context overrides everything
-    _.extend(layout_context, options.context) if options?.context?
+    _.extend(layoutContext, options.context) if options?.context?
 
-    @render(layout, {context: layout_context}, args...)
+    @render(layout, {context: layoutContext}, args...)

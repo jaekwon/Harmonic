@@ -9,4 +9,4 @@ class exports.User extends harmonic.db.Record
   @collection: 'user'
 
   validate: ->
-    # e.g. @v.check_field('text').len(3, 1024)
+    # e.g. @v.checkField('text').len(3, 1024)

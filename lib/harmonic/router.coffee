@@ -31,9 +31,9 @@ class exports.Route
 
   # @routedata:
   #   name:         A globally unique name for the route.
-  #   name_prefix:  Prepended to the name.
-  #   path:         A regexp type with :capture tokens. See 'path_prefix' below.
-  #   path_prefix:  Prepended to the path.
+  #   namePrefix:  Prepended to the name.
+  #   path:         A regexp type with :capture tokens. See 'pathPrefix' below.
+  #   pathPrefix:  Prepended to the path.
   #   reverse:      A function to construct a path from arguments. (optional)
   #   templates:    An instance of Templar.
   #   fn:           The serving function.
@@ -42,8 +42,8 @@ class exports.Route
   #   NOTE -- both fn and wrappers get bound to this Route instance.
   constructor: (@router, @routedata) ->
     _.extend(this, @routedata)
-    @path = "#{@path_prefix}#{@path}" if @path_prefix
-    @name = "#{@name_prefix}#{@name}" if @name_prefix
+    @path = "#{@pathPrefix}#{@path}" if @pathPrefix
+    @name = "#{@namePrefix}#{@name}" if @namePrefix
     @xregexp ||= new XRegExp('^'+@path.replace(/:([^\/]+)/g, '(?<$1>[^\/]+)')+'$')
 
     # construct an array of functions to call in sequence
@@ -52,28 +52,28 @@ class exports.Route
     @chain.push(this.fn.bind(this))
 
   serve: (req, res) =>
-    this.extend_req_res(req, res)
-    chain_counter = 0
+    this.extendReqRes(req, res)
+    chainCounter = 0
     # TODO this could be hard to debug with wrappers incorrectly calling next() multiple times.
     next = (req, res) =>
-      next_wrapper = @chain[chain_counter++]
-      next_wrapper(req, res, next)
+      nextWrapper = @chain[chainCounter++]
+      nextWrapper(req, res, next)
     # and finally
     next(req, res)
 
-  extend_req_res: (req, res) ->
+  extendReqRes: (req, res) ->
     if @templates?
       # add request-level context values
-      res.render_layout = (template, options, args...) =>
+      res.renderLayout = (template, options, args...) =>
         options ||= {}
-        req_context = {
+        reqContext = {
           reverse: @router.reverse,
           req: req,
-          current_user: req.session?.user
+          currentUser: req.session?.user
         }
         # caller's context overrides everything
-        options.context = _.extend(req_context, options.context || {})
-        res.reply 200, {status: 'ok'}, @templates.render_layout(template, options, args...)
+        options.context = _.extend(reqContext, options.context || {})
+        res.reply 200, {status: 'ok'}, @templates.renderLayout(template, options, args...)
 
   toString: =>
     "Route{name:'#{@name}' path:'#{@path}'}"
@@ -83,17 +83,17 @@ class exports.Router
 
   constructor: ->
     @routes = []
-    @named_routes = {}
+    @namedRoutes = {}
     return this
 
   # Main function that serves the request
   serve: (req, res) =>
     # find matching route
-    [route, path] = this.match_route(req.url)
+    [route, path] = this.matchRoute(req.url)
 
     # find 404 route
     if not route?
-      [route, path] = this.match_route('ERROR/404')
+      [route, path] = this.matchRoute('ERROR/404')
 
     # no 404 route!
     if not route?
@@ -112,7 +112,7 @@ class exports.Router
   forward: (req, res, options) =>
     if options.path?
       # find matching route
-      [route, matched] = this.match_route(options.path)
+      [route, matched] = this.matchRoute(options.path)
       if not route?
         message = "Couldn't match a forwarded route for path #{options.path}"
         console.log message
@@ -137,7 +137,7 @@ class exports.Router
   # Find a matching route
   # Path can be a url path starting with /, 
   # or special routes like ERROR/*
-  match_route: (path) ->
+  matchRoute: (path) ->
     path = path.split('?', 1)
     for route in @routes
       matched = route.xregexp.exec(path)
@@ -148,12 +148,12 @@ class exports.Router
   # Looks for a 'reverse' function,
   # otherwise tries to reverse the regex
   reverse: (name, args) =>
-    assert.ok(@named_routes[name]?, "Unknown route name #{name}")
+    assert.ok(@namedRoutes[name]?, "Unknown route name #{name}")
     args ||= {}
-    if @named_routes[name].reverse
-      return @named_routes[name].reverse(args)
+    if @namedRoutes[name].reverse
+      return @namedRoutes[name].reverse(args)
     else
-      xregexp = @named_routes[name].xregexp
+      xregexp = @namedRoutes[name].xregexp
       assert.deepEqual(_.keys(args).sort(), (xregexp._xregexp.captureNames || []).sort(), "capture names don't match")
       reversed = xregexp._xregexp.source
       if reversed[0] == '^' then reversed = reversed[1...]
@@ -163,25 +163,25 @@ class exports.Router
       return reversed
 
   # A function to append more routes.
-  # routes_data:
-  #   name_prefix:  the keys of routes will be prefixed by "#{routes_data.name_prefix}:" (required)
-  #   path_prefix:  if present, paths in routes will be prepended by this (optional)
-  #   templates:    if present, res.render_layout will be set accordingly (optional)
-  #   routes:       an object of {route_name: route_object, ...}
-  extend_routes: (routes_data) =>
-    assert.ok(routes_data.name_prefix?)
-    default_data =
-      name_prefix: routes_data.name_prefix
-      path_prefix: routes_data.path_prefix
-      templates:   routes_data.templates
-    for name, route of routes_data.routes
-      route_data = _.extend( _.clone(default_data), route )
-      route = new exports.Route(this, route_data)
-      this.add_route(route)
+  # routesData:
+  #   namePrefix:  the keys of routes will be prefixed by "#{routesData.namePrefix}:" (required)
+  #   pathPrefix:  if present, paths in routes will be prepended by this (optional)
+  #   templates:    if present, res.renderLayout will be set accordingly (optional)
+  #   routes:       an object of {routeName: routeObject, ...}
+  extendRoutes: (routesData) =>
+    assert.ok(routesData.namePrefix?)
+    defaultData =
+      namePrefix: routesData.namePrefix
+      pathPrefix: routesData.pathPrefix
+      templates:   routesData.templates
+    for name, route of routesData.routes
+      routeData = _.extend( _.clone(defaultData), route )
+      route = new exports.Route(this, routeData)
+      this.addRoute(route)
 
   # Add a Route object
-  add_route: (route) =>
+  addRoute: (route) =>
     if route.name
-      assert.equal(@named_routes[route.name], undefined, "The route name '#{route.name}' is not unique!")
-      @named_routes[route.name] = route
+      assert.equal(@namedRoutes[route.name], undefined, "The route name '#{route.name}' is not unique!")
+      @namedRoutes[route.name] = route
     @routes.push(route)

@@ -5,4 +5,4 @@ class exports.Page extends harmonic.db.Record
   @collection: 'page'
 
   validate: ->
-    # e.g. @v.check_field('text').len(3, 1024)
+    # e.g. @v.checkField('text').len(3, 1024)

@@ -2,6 +2,7 @@
 
 config = require 'config'
 harmonic = require 'harmonic'
+async = require 'async'
 _ = require 'underscore'
 log = console.log
 
@@ -10,13 +11,21 @@ task 'mongo', ->
   models = []
   for appname, apploc of config.apps
     app = require(apploc)
-    models.push(app.models) if app.models?
+    if not app.models?
+      continue
+    for name, value of app.models
+      if value instanceof harmonic.db.Record
+        models.push(value)
   # ensure indices for these models
-  harmonic.db.mongo.ensure_indices_for models, (err, values) ->
+  async.forEach models, (model, next) ->
+    log "Ensuring index for #{model.name}..."
+    harmonic.db.mongo.ensureIndicesFor model, (err, stuff) ->
+      return next(err) if err?
+  , (err, results) ->
     if err?
       log "ERROR! #{err}"
     else
-      log "Done! #{values}"
+      log "Done! #{results}"
     harmonic.db.mongo.shutdown()
 
 run = (args...) ->
