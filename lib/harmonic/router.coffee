@@ -176,6 +176,7 @@ class exports.Router
       templates:   routesData.templates
     for name, route of routesData.routes
       routeData = _.extend( _.clone(defaultData), route )
+      routeData.name = name
       route = new exports.Route(this, routeData)
       this.addRoute(route)
 

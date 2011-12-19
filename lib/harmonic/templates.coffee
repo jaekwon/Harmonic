@@ -108,7 +108,7 @@ class exports.Templar
     
     html = ''
     try
-      html += cm.renderContents(tmplModule.template, args...).toString()
+      html += cm.render_contents(tmplModule.template, args...).toString()
       if tmplModule._compiledCoffeescript
         html += "\n<script type='text/javascript'>#{tmplModule._compiledCoffeescript}</script>"
       if tmplModule._compiledSass
