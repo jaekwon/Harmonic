@@ -1,6 +1,5 @@
 harmonic = require 'harmonic'
 
-@models = {Page} = require('./models')
 @templates = templates = new harmonic.templates.Templar(require, './templates', '../../templates')
 @routes =
 

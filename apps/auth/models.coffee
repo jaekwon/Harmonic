@@ -5,7 +5,7 @@
 config = require 'config'
 harmonic = require 'harmonic'
 
-class exports.User extends harmonic.db.Record
+class exports.User extends harmonic.db.Model
   @collection: 'user'
 
   validate: ->

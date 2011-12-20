@@ -14,14 +14,14 @@ task 'mongo', ->
     if not app.models?
       continue
     for name, value of app.models
-      if value instanceof harmonic.db.Record
+      if value::_modelPrototype is harmonic.db.Model::_modelPrototype
         models.push(value)
-  # ensure indices for these models
-  async.forEach models, (model, next) ->
+  # Foreach models ensure indices for these models
+  async.forEachSeries models, (model, next) ->
     log "Ensuring index for #{model.name}..."
-    harmonic.db.mongo.ensureIndicesFor model, (err, stuff) ->
-      return next(err) if err?
-  , (err, results) ->
+    harmonic.db.mongo.ensureIndicesFor model, next
+  # Finally,
+  ,(err, results) ->
     if err?
       log "ERROR! #{err}"
     else

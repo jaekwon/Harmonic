@@ -5,16 +5,16 @@
 mongo = require './mongo'
 Validator = require('validator').Validator
 ConnectionWrapper = require('./mongo_wrapper').ConnectionWrapper
-logger = require('nogg').logger('db.record')
+logger = require('nogg').logger('db.model')
 
 # Just a wrapper around Validator to handle errors
 # without throwing anything
-class RecordValidator extends Validator
-  constructor: (@record) ->
+class ModelValidator extends Validator
+  constructor: (@model) ->
   error: (msg) ->
-    (@record.errors[@fieldname] ||= []).push(msg)
+    (@model.errors[@fieldname] ||= []).push(msg)
   checkField: (@fieldname, message) ->
-    return this.check(@record.data[@fieldname], message)
+    return this.check(@model.data[@fieldname], message)
   checkOther: (value, message) ->
     @fieldname = null
     return this.check(value, message)
@@ -24,10 +24,10 @@ class RecordValidator extends Validator
 # 1. override collection
 # 2. override the validate function
 # NOTE: the validate function does not get called automatically
-class Record
+class Model
 
-  # so we know that subclasses inherit from Record
-  _recordPrototype: 'Record'
+  # so we know that subclasses inherit from Model
+  _modelPrototype: 'epytotorPlodem_'
 
   # override in your subclass
   @collection: undefined
@@ -40,7 +40,7 @@ class Record
     # fieldname -> error
     # for generic, null -> error
     @errors = {}
-    @v = new RecordValidator(this)
+    @v = new ModelValidator(this)
     # the dict returned from mongodb after an update operation
     @_returnedData = undefined
 
@@ -60,7 +60,7 @@ class Record
   # Get the underlying collection
   @coll: (cb) ->
     if not @collection?
-      throw new Error("collection not defined for record '#{this}'")
+      throw new Error("collection not defined for model '#{this}'")
     mongo.with @collection, (coll) ->
       try
         wcoll = new ConnectionWrapper(coll, mongo.onError)
@@ -77,18 +77,18 @@ class Record
   # queryData: The query data as expected by node-mongodb-native.
   #             Or, a string to find by id.
   @findOne: (queryData, cb) ->
-    _RecordClass = this
+    _ModelClass = this
     this.coll (coll) ->
       coll.find(queryData).limit(2).toArray (err, items) ->
         if err?
           cb(err, null)
           return
         if items.length == 0
-          cb(new Error("No records found for findOne"), null)
+          cb(new Error("No models found for findOne"), null)
           return
         if items.length > 1
-          cb(new Error("More than one record found for findOne"), null)
+          cb(new Error("More than one model found for findOne"), null)
           return
-        cb(null, new _RecordClass(items[0]))
+        cb(null, new _ModelClass(items[0]))
 
-exports.Record = Record
+exports.Model = Model

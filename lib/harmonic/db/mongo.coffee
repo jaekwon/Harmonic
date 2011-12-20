@@ -32,7 +32,7 @@ exports.shutdown = ->
   logger.info "all mongo db connections shut down!"
 
 # Ensure indices for all the given model
-# model:          A subclass of Record
+# model:          A subclass of Model
 #   collection:   The name of the collection
 #   index:        List of ensureIndex args
 exports.ensureIndicesFor = (model, callback) ->
@@ -48,3 +48,5 @@ exports.ensureIndicesFor = (model, callback) ->
       [dbName, collName] = [config.database.defaultDb, model.collection]
     collection = server.db(dbName).getCollection(collName)
     collection.ensureIndex index, options, callback
+  else
+    callback(null, null)

@@ -1,7 +1,7 @@
 config = require 'config'
 harmonic = require 'harmonic'
 
-class exports.Page extends harmonic.db.Record
+class exports.Page extends harmonic.db.Model
   @collection: 'page'
 
   validate: ->

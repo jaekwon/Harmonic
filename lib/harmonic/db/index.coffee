@@ -1,3 +1,3 @@
 exports.mongo = require './mongo'
-exports.record = require './record'
-exports.Record = exports.record.Record
+exports.model = require './model'
+exports.Model = exports.model.Model
