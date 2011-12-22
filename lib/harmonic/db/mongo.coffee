@@ -25,6 +25,20 @@ server = new Mongolian(config.database.serverUri,
     error: mongolianLogger.error
 )
 
+# Get Server
+exports.withServer = withServer = (options, callback) ->
+  callback(null, server)
+
+# Get Collection
+# collection: 'dbname.collname', or just 'collname'
+exports.withCollection = withCollection = (collection, callback) ->
+  if '.' in collection
+    [dbName, collName] = collection.split '.'
+  else
+    [dbName, collName] = [config.database.defaultDb, collection]
+  collection = server.db(dbName).getCollection(collName)
+  callback(null, collection)
+
 # Close all databases.
 # You need to call this for your program to exit.
 exports.shutdown = ->
@@ -42,11 +56,8 @@ exports.ensureIndicesFor = (model, callback) ->
       [index, options] = indexOptions
     else
       [index, options] = [indexOptions, null]
-    if '.' in model.collection
-      [dbName, collName] = model.collection.split '.'
-    else
-      [dbName, collName] = [config.database.defaultDb, model.collection]
-    collection = server.db(dbName).getCollection(collName)
-    collection.ensureIndex index, options, callback
+    withCollection model.collection, (err, collection) ->
+      return callback(err) if err?
+      collection.ensureIndex index, options, callback
   else
-    callback(null, null)
+    callback(null)

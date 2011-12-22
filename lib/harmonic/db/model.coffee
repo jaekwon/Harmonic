@@ -2,10 +2,10 @@
 # Copyright (c) 2011 Jae Kwon 
 #++
 
-mongo = require './mongo'
-Validator = require('validator').Validator
-ConnectionWrapper = require('./mongo_wrapper').ConnectionWrapper
 logger = require('nogg').logger('db.model')
+mongo = require './mongo'
+deferral = require('../utils').deferral
+Validator = require('validator').Validator
 
 # Just a wrapper around Validator to handle errors
 # without throwing anything
@@ -30,7 +30,7 @@ class Model
   _modelPrototype: 'epytotorPlodem_'
 
   # override in your subclass
-  @collection: undefined
+  collection: undefined
 
   # override in your subclass
   validate: ->
@@ -41,16 +41,13 @@ class Model
     # for generic, null -> error
     @errors = {}
     @v = new ModelValidator(this)
-    # the dict returned from mongodb after an update operation
-    @_returnedData = undefined
 
   # NOTE: does not validate.
   save: (cb) ->
-    this.coll (coll) =>
+    this.withCollection (err, coll) =>
+      return cb(err) if err? and cb?
       coll.insert @data, {}, (err, it) =>
-        @_returnedData = it
-        if cb
-          cb(err, if err? undefined else this)
+        cb(err, if err? undefined else this) if cb?
 
   # NOTE: does not validate.
   @create: (data, cb) ->
@@ -58,37 +55,73 @@ class Model
     rec.save(cb)
 
   # Get the underlying collection
-  @coll: (cb) ->
-    if not @collection?
-      throw new Error("collection not defined for model '#{this}'")
-    mongo.with @collection, (coll) ->
-      try
-        wcoll = new ConnectionWrapper(coll, mongo.onError)
-        cb(wcoll)
-      catch err
-        mongo.onError(err)
+  # - cb:    (err, coll) -> ...
+  @withCollection: (cb) ->
+    if not this::collection?
+      throw new Error("Collection not defined for model '#{this}'")
+    mongo.withCollection this::collection, cb
 
   # Get the underlying collection (instance method)
-  coll: (cb) ->
-    this.constructor.coll(cb)
+  # You can override the collection of a model instance
+  #  by setting <Model>.collection .
+  # - cb:    (err, coll) -> ...
+  withCollection: (cb) ->
+    if not this.collection?
+      throw new Error("Collection not defined for instance '#{this}'")
+    mongo.withCollection this.collection, cb
 
-  # Find exactly one.
-  # If none or more than one is found, you'll get an error.
-  # queryData: The query data as expected by node-mongodb-native.
-  #             Or, a string to find by id.
-  @findOne: (queryData, cb) ->
-    _ModelClass = this
-    this.coll (coll) ->
-      coll.find(queryData).limit(2).toArray (err, items) ->
-        if err?
-          cb(err, null)
-          return
-        if items.length == 0
-          cb(new Error("No models found for findOne"), null)
-          return
-        if items.length > 1
-          cb(new Error("More than one model found for findOne"), null)
-          return
-        cb(null, new _ModelClass(items[0]))
+  # Find query method
+  # - query:      The query filter.
+  # - options:
+  #   - fields:   Set of fields to return.
+  #   - limit:    Limit to this many results
+  #   - skip:     Skip this many results
+  #   - sort:     Sort object
+  # Returned object has methods:
+  #   - toArray(callback)
+  #   - forEach(func, callback)
+  #   - next(callback)
+  #   - count(callback) // ignores skip/limit
+  #   - size(callback)  // honors skip/limit
+  #   - skip, limit, sort
+  @find: (query, options) ->
+    return deferral
+      terminal: ['toArray', 'forEach', 'next', 'count', 'size']
+      circular: ['skip', 'limit', 'sort', 'map']
+      deferral: (realize) =>
+        this.withCollection (err, coll) ->
+          cursor = coll.find(query, options.fields)
+          if options.limit?
+            cursor = cursor.limit(options.limit)
+          if options.skip?
+            cursor = cursor.skip(options.skip)
+          if options.sort?
+            cursor = cursor.sort(options.sort)
+          # convert pojos to instances of this model
+          cursor = cursor.map (doc) -> new this(doc)
+          # do onto cursor what was done onto the deferral
+          realize(cursor)
+
+  # This is different from mongo's native findOne method;
+  # It errors when more than one doc matches.
+  # - query: (coll) -> coll.find() etc
+  # - cb:    (err, <Model>) -> ...
+  @findOne: (query, cb) ->
+    this.withCollection (err, coll) ->
+      return cb(err, coll) if err? and cb?
+      queryColl = query(coll)
+      if not queryColl?
+        throw new Error("Query did not return a collection")
+      queryColl.findOne(
+
+  Model.query( (c)->c.find() ).toArray (err, array) ->
+    array...
+
+  Model.find(query, options).toArray (err, array) ->
+    array...
+
+  Model.findOne query, options, (err, array) ->
+    array...
+
 
 exports.Model = Model
