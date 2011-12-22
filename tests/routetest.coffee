@@ -1,22 +1,29 @@
 harmonic = require 'harmonic'
+assert = require 'assert'
 
-exports.testReverse = (test) ->
+describe 'Router', ->
 
-  defaults = {}
-  router = new harmonic.Router(defaults,
-    {
-      name: 'testroute1'
-      reverse: (_) -> "path/#{_.foo}/#{_.bar}"
-      path: "path/:foo/:bar", fn: (res, req) ->
-        console.log 'dontcare'
-    },{
-      name: 'testroute2'
-      path: "path/:foo/:bar", fn: (res, req) ->
-        console.log 'dontcare'
-    }
-  )
+  router = new harmonic.Router()
+  router.extendRoutes
+    namePrefix: 'test:'
+    routes:
+      route1:
+        reverse: (_) -> "path/#{_.foo}/#{_.bar}"
+        path: "path/:foo/:bar", fn: (res, req) ->
+          console.log 'dontcare'
+      route2:
+        path: "path/:foo/:bar", fn: (res, req) ->
+          console.log 'dontcare'
 
-  test.ok(router, 'no router')
-  test.equal(router.reverse('testroute1', foo: "FOO", bar: "BAR"), "path/FOO/BAR")
-  test.equal(router.reverse('testroute2', foo: "FOO", bar: "BAR"), "path/FOO/BAR")
-  test.done()
+  describe '#reverse', ->
+    it 'works with <Route>.reverse', ->
+      assert.equal(
+        router.reverse('test:route1', foo: 'FOO', bar: 'BAR')
+        'path/FOO/BAR'
+      )
+
+    it 'works without <Route>.reverse', ->
+      assert.equal(
+        router.reverse('test:route2', foo: 'FOO', bar: 'BAR')
+        'path/FOO/BAR'
+      )

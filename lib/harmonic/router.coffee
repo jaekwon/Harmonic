@@ -148,7 +148,7 @@ class exports.Router
   # Looks for a 'reverse' function,
   # otherwise tries to reverse the regex
   reverse: (name, args) =>
-    assert.ok(@namedRoutes[name]?, "Unknown route name #{name}")
+    assert.ok(@namedRoutes[name]?, "Unknown route name #{name}. Routes: #{_.keys(@namedRoutes)}")
     args ||= {}
     if @namedRoutes[name].reverse
       return @namedRoutes[name].reverse(args)
@@ -169,7 +169,8 @@ class exports.Router
   #   templates:    if present, res.renderLayout will be set accordingly (optional)
   #   routes:       an object of {routeName: routeObject, ...}
   extendRoutes: (routesData) =>
-    assert.ok(routesData.namePrefix?)
+    assert.ok(routesData.namePrefix?, "Method extendRoutes expected keyword 'namePrefix'")
+    assert.ok(routesData.routes?, "Method extendRoutes expected keyword 'routes'")
     defaultData =
       namePrefix: routesData.namePrefix
       pathPrefix: routesData.pathPrefix

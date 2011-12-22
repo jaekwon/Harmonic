@@ -7,7 +7,9 @@ _ = require 'underscore'
 log = console.log
 
 task 'mongo', ->
-  # find all models from apps
+  # Ensure mongo indices
+
+  # Find all models from apps
   models = []
   for appname, apploc of config.apps
     app = require(apploc)
@@ -16,18 +18,23 @@ task 'mongo', ->
     for name, value of app.models
       if value::_modelPrototype is harmonic.db.Model::_modelPrototype
         models.push(value)
+
   # Foreach models ensure indices for these models
   async.forEachSeries models, (model, next) ->
     log "Ensuring index for #{model.name}..."
     harmonic.db.mongo.ensureIndicesFor model, next
+
   # Finally,
   ,(err, results) ->
     if err?
       log "ERROR! #{err}"
-    else
-      log "Done! #{results}"
     harmonic.db.mongo.shutdown()
 
+task 'test', ->
+  # Run all tests
+  run './node_modules/.bin/mocha -c `find tests | grep coffee | xargs echo`'
+
+# Util...
 run = (args...) ->
   for a in args
     switch typeof a

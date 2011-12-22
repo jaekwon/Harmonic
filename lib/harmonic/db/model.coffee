@@ -4,8 +4,8 @@
 
 logger = require('nogg').logger('db.model')
 mongo = require './mongo'
-deferral = require('../utils').deferral
-Validator = require('validator').Validator
+{deferral} = require '../utils'
+{Validator} = require 'validator'
 
 # Just a wrapper around Validator to handle errors
 # without throwing anything
@@ -59,7 +59,7 @@ class Model
   @withCollection: (cb) ->
     if not this::collection?
       throw new Error("Collection not defined for model '#{this}'")
-    mongo.withCollection this::collection, cb
+    mongo.withCollection {collection: this::collection}, cb
 
   # Get the underlying collection (instance method)
   # You can override the collection of a model instance
@@ -68,7 +68,7 @@ class Model
   withCollection: (cb) ->
     if not this.collection?
       throw new Error("Collection not defined for instance '#{this}'")
-    mongo.withCollection this.collection, cb
+    mongo.withCollection {collection: this.collection}, cb
 
   # Find query method
   # - query:      The query filter.
@@ -85,7 +85,7 @@ class Model
   #   - size(callback)  // honors skip/limit
   #   - skip, limit, sort
   @find: (query, options) ->
-    return deferral
+    deferral
       terminal: ['toArray', 'forEach', 'next', 'count', 'size']
       circular: ['skip', 'limit', 'sort', 'map']
       deferral: (realize) =>
@@ -101,27 +101,5 @@ class Model
           cursor = cursor.map (doc) -> new this(doc)
           # do onto cursor what was done onto the deferral
           realize(cursor)
-
-  # This is different from mongo's native findOne method;
-  # It errors when more than one doc matches.
-  # - query: (coll) -> coll.find() etc
-  # - cb:    (err, <Model>) -> ...
-  @findOne: (query, cb) ->
-    this.withCollection (err, coll) ->
-      return cb(err, coll) if err? and cb?
-      queryColl = query(coll)
-      if not queryColl?
-        throw new Error("Query did not return a collection")
-      queryColl.findOne(
-
-  Model.query( (c)->c.find() ).toArray (err, array) ->
-    array...
-
-  Model.find(query, options).toArray (err, array) ->
-    array...
-
-  Model.findOne query, options, (err, array) ->
-    array...
-
 
 exports.Model = Model
