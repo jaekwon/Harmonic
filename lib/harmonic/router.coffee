@@ -41,23 +41,35 @@ class exports.Route
   #   templates:    An instance of Templar.
   constructor: (@router, @routedata) ->
     _.extend(this, @routedata)
+    @wrap = [@wrap] if typeof @wrap == 'function'
     @path = "#{@pathPrefix}#{@path}" if @pathPrefix
     @name = "#{@namePrefix}#{@name}" if @namePrefix
     @xregexp ||= new XRegExp('^'+@path.replace(/:([^\/]+)/g, '(?<$1>[^\/]+)')+'$')
 
-    # construct an array of functions to call in sequence
-    # notice that the wrappers
-    @chain = if this.wrappers then (wrapper.bind(this) for wrapper in this.wrappers) else []
+    # create the chain of functions
+    @chain = if @wrap then (wrapper.bind(this) for wrapper in @wrap) else []
     @chain.push(this.fn.bind(this))
 
   serve: (req, res) =>
     this.extendReqRes(req, res)
-    chainCounter = 0
-    # TODO this could be hard to debug with wrappers incorrectly calling next() multiple times.
+    chainIndex = 0
+    # a wrapper (and <Route>.fn) takes this (actually, nextProxy below) as the third argument.
     next = (req, res) =>
-      nextWrapper = @chain[chainCounter++]
-      nextWrapper(req, res, next)
-    # and finally
+      fn = @chain[chainIndex++]
+      # ensure that 'next' only gets called once per chain fn, using a proxy fn.
+      nextCalled = false
+      nextProxy = (req, res) =>
+        if nextCalled
+          throw new Error "'next' called more than once for route '#{@name}' in chain #0+#{chainIndex-1}"
+        else
+          nextCalled = true
+        next(req, res)
+      # convenience: set some common keys.
+      nextProxy.router = @router
+      nextProxy.urlFor = @router.urlFor
+      # call next fn in chain.
+      fn(req, res, nextProxy)
+    # start the chain.
     next(req, res)
 
   extendReqRes: (req, res) ->
