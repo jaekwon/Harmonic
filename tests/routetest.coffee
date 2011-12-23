@@ -8,22 +8,22 @@ describe 'Router', ->
     namePrefix: 'test:'
     routes:
       route1:
-        reverse: (_) -> "path/#{_.foo}/#{_.bar}"
+        rvrs: -> "path/#{@foo}/#{@bar}"
         path: "path/:foo/:bar", fn: (res, req) ->
           console.log 'dontcare'
       route2:
         path: "path/:foo/:bar", fn: (res, req) ->
           console.log 'dontcare'
 
-  describe '#reverse', ->
-    it 'works with <Route>.reverse', ->
+  describe '#urlFor', ->
+    it 'works with <Route>.rvrs', ->
       assert.equal(
-        router.reverse('test:route1', foo: 'FOO', bar: 'BAR')
+        router.urlFor('test:route1', foo: 'FOO', bar: 'BAR')
         'path/FOO/BAR'
       )
 
-    it 'works without <Route>.reverse', ->
+    it 'works without <Route>.rvrs', ->
       assert.equal(
-        router.reverse('test:route2', foo: 'FOO', bar: 'BAR')
+        router.urlFor('test:route2', foo: 'FOO', bar: 'BAR')
         'path/FOO/BAR'
       )

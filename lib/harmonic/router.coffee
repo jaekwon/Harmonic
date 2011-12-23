@@ -31,15 +31,14 @@ class exports.Route
 
   # @routedata:
   #   name:         A globally unique name for the route.
-  #   namePrefix:  Prepended to the name.
   #   path:         A regexp type with :capture tokens. See 'pathPrefix' below.
-  #   pathPrefix:  Prepended to the path.
-  #   reverse:      A function to construct a path from arguments. (optional)
+  #   rvrs:         A function to construct a path from arguments, used for urlFor. (optional)
+  #   wrap:         Decorators for the fn, much like connect middleware. (optional)
+  #   fn:           The serving function, gets bound to this <Route>.
+  # (the following are optional, used in apps)
+  #   namePrefix:   Prepended to the name.
+  #   pathPrefix:   Prepended to the path.
   #   templates:    An instance of Templar.
-  #   fn:           The serving function.
-  #   wrap:         Decorators for the fn, much like connect middleware.
-  #                 Should be 'wrappers' but I chose a four letter word. (optional)
-  #   NOTE -- both fn and wrappers get bound to this Route instance.
   constructor: (@router, @routedata) ->
     _.extend(this, @routedata)
     @path = "#{@pathPrefix}#{@path}" if @pathPrefix
@@ -67,7 +66,7 @@ class exports.Route
       res.renderLayout = (template, options, args...) =>
         options ||= {}
         reqContext = {
-          reverse: @router.reverse,
+          urlFor: @router.urlFor,
           req: req,
           currentUser: req.session?.user
         }
@@ -145,20 +144,19 @@ class exports.Router
     return [null, undefined]
 
   # Reverse a named route
-  # Looks for a 'reverse' function,
+  # Looks for a 'rvrs' function,
   # otherwise tries to reverse the regex
-  reverse: (name, args) =>
+  urlFor: (name, kwargs) =>
     assert.ok(@namedRoutes[name]?, "Unknown route name #{name}. Routes: #{_.keys(@namedRoutes)}")
-    args ||= {}
-    if @namedRoutes[name].reverse
-      return @namedRoutes[name].reverse(args)
+    if @namedRoutes[name].rvrs
+      return @namedRoutes[name].rvrs.call(kwargs)
     else
       xregexp = @namedRoutes[name].xregexp
-      assert.deepEqual(_.keys(args).sort(), (xregexp._xregexp.captureNames || []).sort(), "capture names don't match")
+      assert.deepEqual(_.keys(kwargs).sort(), (xregexp._xregexp.captureNames || []).sort(), "capture names don't match")
       reversed = xregexp._xregexp.source
       if reversed[0] == '^' then reversed = reversed[1...]
       if reversed[reversed.length-1] == '$' then reversed = reversed[...reversed.length-1]
-      for key, value of args
+      for key, value of kwargs
         reversed = reversed.replace(///\(\?<#{key}>[^)]+\)///, value)
       return reversed
 

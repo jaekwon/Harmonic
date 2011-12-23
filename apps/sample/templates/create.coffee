@@ -2,7 +2,7 @@ exports.template = ->
   @div '#contents', ->
     @text "Create a new page."
 
-    @form method: 'POST', action: @reverse('sample:create'), ->
+    @form method: 'POST', action: @urlFor('sample:create'), ->
       @label for: 'title', 'title'
       @input id: 'title', type: 'text', name: 'title'
       @br()

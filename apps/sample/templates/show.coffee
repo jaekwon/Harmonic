@@ -2,4 +2,4 @@ exports.template = (page) ->
   @text "#{page.data}"
   @ul ->
     @li ->
-      @a href: @reverse('sample:create'), 'create'
+      @a href: @urlFor('sample:create'), 'create'

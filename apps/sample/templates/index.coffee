@@ -1,6 +1,6 @@
 exports.template = ->
   @ul ->
     @li ->
-      @a href: @reverse('sample:list'), 'list'
+      @a href: @urlFor('sample:list'), 'list'
     @li ->
-      @a href: @reverse('sample:create'), 'create'
+      @a href: @urlFor('sample:create'), 'create'

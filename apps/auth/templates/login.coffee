@@ -1,7 +1,7 @@
 exports.template = ->
   @text "Login In"
 
-  @form method: 'POST', action: @reverse('auth:login'), ->
+  @form method: 'POST', action: @urlFor('auth:login'), ->
     @label for: 'username', 'username'
     @input type: 'text', name: 'username'
     @br()

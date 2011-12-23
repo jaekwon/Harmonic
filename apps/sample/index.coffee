@@ -24,10 +24,13 @@ harmonic = require 'harmonic'
           res.renderLayout('show', null)
 
   create:
-    path: '/create', fn: (req, res) ->
+    path: '/create', fn: (req, res, {router}) ->
       switch req.method
         when 'GET'
           res.renderLayout('create')
         when 'POST'
-          # TODO
-          res.renderLayout('create')
+          Page.create req.body.page, (page) ->
+            res.
+            console.log page
+            # TODO
+            res.renderLayout('create')

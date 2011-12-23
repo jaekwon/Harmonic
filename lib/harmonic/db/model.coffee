@@ -79,6 +79,7 @@ class Model
   #   - limit:    Limit to this many results
   #   - skip:     Skip this many results
   #   - sort:     Sort object
+  #
   # Returned object has methods:
   #   - toArray(callback)
   #   - forEach(func, callback)
