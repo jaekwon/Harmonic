@@ -14,7 +14,8 @@
     "nogg": ">= 0.0.3",
     "underscore": ">= 1.2.3",
     "validator": ">= 0.3.7",
-    "xregexp": ">= 1.5.0"
+    "xregexp": ">= 1.5.0",
+    "fnstuff": "0.0.1alpha"
   },
   "devDependencies": {
     "mocha": ">= 0.7.0"
