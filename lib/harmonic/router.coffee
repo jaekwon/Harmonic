@@ -43,7 +43,7 @@ class exports.Route
     _.extend(this, @routedata)
     @wrap = [@wrap] if typeof @wrap == 'function'
     @path = "#{@pathPrefix}#{@path}" if @pathPrefix
-    @name = "#{@namePrefix}#{@name}" if @namePrefix
+    @name = "#{@namePrefix}:#{@name}" if @namePrefix
     @xregexp ||= new XRegExp('^'+@path.replace(/:([^\/]+)/g, '(?<$1>[^\/]+)')+'$')
 
     # create the chain of functions
@@ -66,11 +66,18 @@ class exports.Route
         next(req, res)
       # convenience: set some common keys.
       nextProxy.router = @router
-      nextProxy.urlFor = @router.urlFor
+      nextProxy.urlFor = @urlFor
       # call next fn in chain.
       fn(req, res, nextProxy)
     # start the chain.
     next(req, res)
+
+  # Just like <Router>.urlFor, except @namePrefix
+  # gets prepended if need be.
+  urlFor: (name, kwargs) =>
+    if ':' not in name
+      name = "#{@namePrefix}:#{name}"
+    @router.urlFor(name, kwargs)
 
   extendReqRes: (req, res) ->
     if @templates?
@@ -78,7 +85,7 @@ class exports.Route
       res.renderLayout = (template, options, args...) =>
         options ||= {}
         reqContext = {
-          urlFor: @router.urlFor,
+          urlFor: @urlFor,
           req: req,
           currentUser: req.session?.user
         }
@@ -180,6 +187,7 @@ class exports.Router
   #   routes:       an object of {routeName: routeObject, ...}
   extendRoutes: (routesData) =>
     assert.ok(routesData.namePrefix?, "Method extendRoutes expected keyword 'namePrefix'")
+    assert.ok(':' not in routesData.namePrefix, "namePrefix need not include the colon, it gets added automatically.")
     assert.ok(routesData.routes?, "Method extendRoutes expected keyword 'routes'")
     defaultData =
       namePrefix: routesData.namePrefix

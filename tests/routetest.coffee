@@ -5,7 +5,7 @@ describe 'Router', ->
 
   router = new harmonic.Router()
   router.extendRoutes
-    namePrefix: 'test:'
+    namePrefix: 'test'
     routes:
       route1:
         rvrs: -> "path/#{@foo}/#{@bar}"

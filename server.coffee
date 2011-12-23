@@ -26,7 +26,7 @@ router = new harmonic.Router()
 for appname, apploc of config.apps
   do (appname, apploc) ->
     app = require(apploc)
-    routesData = {namePrefix: appname+":"}
+    routesData = {namePrefix: appname}
     _.extend(routesData, require(apploc))
     router.extendRoutes(routesData)
 
