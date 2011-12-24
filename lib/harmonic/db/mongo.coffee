@@ -43,7 +43,7 @@ exports.withCollection = withCollection = (options, callback) ->
 
   withServer null, (err, server) ->
     return callback(err) if err?
-    collection = server.db(dbName).getCollection(collName)
+    collection = server.db(dbName).collection(collName)
     callback(null, collection)
 
 # Close all databases.

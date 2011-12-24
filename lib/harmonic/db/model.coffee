@@ -48,13 +48,13 @@ class Model
   save: Fn('[{options}?] [cb->]') (options, cb) ->
     this.withCollection (err, coll) =>
       return cb(err) if err? and cb?
-      coll.insert @data, {}, (err, it) =>
+      coll.insert @data, (err, it) =>
         cb(err, if err? undefined else this) if cb?
 
   # NOTE: does not validate.
-  @create: Fn('{data} [{options}?] [cb->]') (data, cb) ->
+  @create: Fn('{data} [{options}?] [cb->]') (data, options, cb) ->
     rec = new this(data)
-    rec.save(cb)
+    rec.save(options, cb)
 
   # Get the underlying collection
   # - cb:    (err, coll) -> ...
@@ -104,5 +104,11 @@ class Model
           cursor = cursor.map (doc) -> new this(doc)
           # do onto cursor what was done onto the deferral
           realize(cursor)
+
+  @toString: ->
+    "class:#{@name}"
+
+  toString: ->
+    "<#{@constructor.name}>"
 
 exports.Model = Model

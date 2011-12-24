@@ -33,5 +33,4 @@ harmonic = require 'harmonic'
             if err?
               console.log err, 'ERR!'
             else
-              console.log page, "YAY?"
-              res.redirect urlFor('show', pageId: page._id)
+              res.redirect urlFor('show', pageId: page.data._id)

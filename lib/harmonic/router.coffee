@@ -11,6 +11,7 @@ http = require 'http'
 _ = require 'underscore'
 
 do -> # prototype extensions
+
   _.extend(http.ServerResponse.prototype, {
     simpleJSON: (code, obj) ->
       body = new Buffer(JSON.stringify(obj))
@@ -29,16 +30,16 @@ do -> # prototype extensions
 # A single servlet function. A Router has many Routes.
 class exports.Route
 
-  # @routedata:
-  #   name:         A globally unique name for the route.
-  #   path:         A regexp type with :capture tokens. See 'pathPrefix' below.
-  #   rvrs:         A function to construct a path from arguments, used for urlFor. (optional)
-  #   wrap:         Decorators for the fn, much like connect middleware. (optional)
-  #   fn:           The serving function, gets bound to this <Route>.
+  # - routedata:
+  #   - name:         A globally unique name for the route.
+  #   - path:         A regexp type with :capture tokens. See 'pathPrefix' below.
+  #   - rvrs:         A function to construct a path from arguments, used for urlFor. (optional)
+  #   - wrap:         Decorators for the fn, much like connect middleware. (optional)
+  #   - fn:           The serving function, gets bound to this <Route>.
   # (the following are optional, used in apps)
-  #   namePrefix:   Prepended to the name.
-  #   pathPrefix:   Prepended to the path.
-  #   templates:    An instance of Templar.
+  #   - namePrefix:   Prepended to the name.
+  #   - pathPrefix:   Prepended to the path.
+  #   - templates:    An instance of Templar.
   constructor: (@router, @routedata) ->
     _.extend(this, @routedata)
     @wrap = [@wrap] if typeof @wrap == 'function'
@@ -51,7 +52,7 @@ class exports.Route
     @chain.push(this.fn.bind(this))
 
   serve: (req, res) =>
-    this.extendReqRes(req, res)
+    this._extendReqRes(req, res)
     chainIndex = 0
     # a wrapper (and <Route>.fn) takes this (actually, nextProxy below) as the third argument.
     next = (req, res) =>
@@ -79,7 +80,7 @@ class exports.Route
       name = "#{@namePrefix}:#{name}"
     @router.urlFor(name, kwargs)
 
-  extendReqRes: (req, res) ->
+  _extendReqRes: (req, res) ->
     if @templates?
       # add request-level context values
       res.renderLayout = (template, options, args...) =>
@@ -120,13 +121,14 @@ class exports.Router
       res.writeHead 404, message
       return false
     req.path = path
+
     this.forward(req, res, route: route)
 
   # Forward the request to the route given in options.
-  # options:
-  #   path:    find a route by path
-  #   name:    find a route by name
-  #   route:   use this route
+  # - options:
+  #   - path:    Find a route by path
+  #   - name:    Find a route by name
+  #   - route:   Use this route
   forward: (req, res, options) =>
     if options.path?
       # find matching route
@@ -165,7 +167,7 @@ class exports.Router
   # Reverse a named route
   # Looks for a 'rvrs' function,
   # otherwise tries to reverse the regex
-  urlFor: (name, kwargs) =>
+  urlFor: (name, kwargs={}) =>
     assert.ok(@namedRoutes[name]?, "Unknown route name #{name}. Routes: #{_.keys(@namedRoutes)}")
     if @namedRoutes[name].rvrs
       return @namedRoutes[name].rvrs.call(kwargs)
@@ -180,11 +182,11 @@ class exports.Router
       return reversed
 
   # A function to append more routes.
-  # routesData:
-  #   namePrefix:  the keys of routes will be prefixed by "#{routesData.namePrefix}:" (required)
-  #   pathPrefix:  if present, paths in routes will be prepended by this (optional)
-  #   templates:    if present, res.renderLayout will be set accordingly (optional)
-  #   routes:       an object of {routeName: routeObject, ...}
+  # - routesData:
+  #   - namePrefix:   The keys of routes will be prefixed by "#{routesData.namePrefix}:" (required)
+  #   - pathPrefix:   If present, paths in routes will be prepended by this (optional)
+  #   - templates:    If present, res.renderLayout will be set accordingly (optional)
+  #   - routes:       An object of {routeName: routeObject, ...}
   extendRoutes: (routesData) =>
     assert.ok(routesData.namePrefix?, "Method extendRoutes expected keyword 'namePrefix'")
     assert.ok(':' not in routesData.namePrefix, "namePrefix need not include the colon, it gets added automatically.")
@@ -199,7 +201,6 @@ class exports.Router
       route = new exports.Route(this, routeData)
       this.addRoute(route)
 
-  # Add a Route object
   addRoute: (route) =>
     if route.name
       assert.equal(@namedRoutes[route.name], undefined, "The route name '#{route.name}' is not unique!")

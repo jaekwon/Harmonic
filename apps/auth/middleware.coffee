@@ -5,5 +5,4 @@ module.exports = (options) ->
     if not req.session?
       logger.warn "auth app cannot function without connect.session."
       return next()
-
     next()
