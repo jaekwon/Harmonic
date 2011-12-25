@@ -70,3 +70,7 @@ exports.ensureIndicesFor = (model, callback) ->
         callback(null, model.name)
   else
     callback(null)
+
+# BSON types
+for key in ['Long', 'ObjectId', 'Timestamp', 'Binary', 'DBRef', 'Code']
+  exports[key] = Mongolian[key]

@@ -20,8 +20,11 @@ harmonic = require 'harmonic'
     path: '/show/:pageId', fn: (req, res) ->
       switch req.method
         when 'GET'
-          Page.findOne req.path.pageId
-          res.renderLayout('show', null)
+          Page.findOne req.path.pageId, (err, page) ->
+            if err?
+              console.log err, 'ERR!'
+            else
+              res.renderLayout('show', null, page)
 
   create:
     path: '/create', fn: (req, res, {urlFor}) ->

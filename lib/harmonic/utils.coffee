@@ -25,17 +25,18 @@ exports.deferral = (options) ->
       {key, args} = call
       assert.ok current[key], "Object does not contain the deferred method '#{key}'"
       current = current[key](args...)
-      assert.ok current, "Deferred method '#{key}' did not return an object"
+      if key not in options.terminal
+        assert.ok current, "Deferred method '#{key}' did not return an object"
 
   # Define the proxy object which collects chain calls
   proxy = {}
   _.forEach options.circular, (circKey) ->
     proxy[circKey] = ->
-      methodCalls.append(key: circKey, args: arguments)
+      methodCalls.push(key: circKey, args: arguments)
       return proxy
   _.forEach options.terminal, (termKey) ->
     proxy[termKey] = ->
-      methodCalls.append(key: termKey, args: arguments)
+      methodCalls.push(key: termKey, args: arguments)
       # call deferral, hope 'realize' gets called.
       options.deferral(realize)
       return null

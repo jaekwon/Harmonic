@@ -30,19 +30,8 @@ for appname, apploc of config.apps
     _.extend(routesData, require(apploc))
     router.extendRoutes(routesData)
 
-# Debug middleware
-logErrors = (options) ->
-  return (req, res, next) ->
-    try
-      next()
-    catch err
-      console.log "ERRORS: #{err}"
-    finally
-      console.log 'NO ERRORS'
-
 # init server
 http.createServer(connect()
-  .use(logErrors())
   .use(connect.logger())
   .use(connect.staticCache())
   .use('/static', connect.static(__dirname + '/static'))

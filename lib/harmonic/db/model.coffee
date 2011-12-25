@@ -88,11 +88,12 @@ class Model
   #   - size(callback)  // honors skip/limit
   #   - skip, limit, sort
   @find: (query, options) ->
+    modelClass = this
     deferral
       terminal: ['toArray', 'forEach', 'next', 'count', 'size']
       circular: ['skip', 'limit', 'sort', 'map']
-      deferral: (realize) =>
-        this.withCollection (err, coll) ->
+      deferral: (realize) ->
+        modelClass.withCollection (err, coll) ->
           cursor = coll.find(query, options.fields)
           if options.limit?
             cursor = cursor.limit(options.limit)
@@ -101,9 +102,20 @@ class Model
           if options.sort?
             cursor = cursor.sort(options.sort)
           # convert pojos to instances of this model
-          cursor = cursor.map (doc) -> new this(doc)
+          cursor = cursor.map (doc) -> new modelClass(doc)
           # do onto cursor what was done onto the deferral
           realize(cursor)
+
+  # Find (and expect) just one.
+  # - query:    The query filter, or an _id string.
+  # - callback: A callback(err, <Model>) ->
+  @findOne: (query, callback) ->
+    if (typeof query) == 'string'
+      query = {_id: mongo.ObjectId(query)}
+    @find(query, limit: 2).toArray (err, arr) =>
+      if arr.length != 1
+        return callback(new Error("#{this}.findOne expected 1 result but got #{arr.length}"), null)
+      callback(null, arr[0])
 
   @toString: ->
     "class:#{@name}"

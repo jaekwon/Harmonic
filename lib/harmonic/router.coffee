@@ -178,6 +178,7 @@ class exports.Router
       if reversed[0] == '^' then reversed = reversed[1...]
       if reversed[reversed.length-1] == '$' then reversed = reversed[...reversed.length-1]
       for key, value of kwargs
+        assert.ok(value, "Value of urlFor kwarg cannot be null or undefined. key: '#{key}' value: '#{value}'")
         reversed = reversed.replace(///\(\?<#{key}>[^)]+\)///, value)
       return reversed
 
