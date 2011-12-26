@@ -136,6 +136,7 @@ class exports.Router
     for route in @routes
       matched = route.xregexp.exec(path)
       if matched
+        req.path = matched
         route.serve(req, res, data)
         return true
 
@@ -147,7 +148,7 @@ class exports.Router
     else
       return @forward 'ERROR/404', req, res, message: "Couldn't find a route matching path: '#{path}'"
 
-    throw new Error, 'should not happen'
+    throw new Error 'should not happen'
 
   # Reverse a named route
   # Looks for a 'rvrs' function,
