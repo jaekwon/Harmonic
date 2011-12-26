@@ -20,7 +20,6 @@ exports.staticFile = staticFile = (filepath) ->
   return _staticFileCache[filepath]
 
 # Main templates rendering class.
-# 
 # - require:      The `require` function will be used to import the template file
 # - directories:  Order in which Templar should look for files.
 class exports.Templar
@@ -31,12 +30,13 @@ class exports.Templar
     @templateMtimes = {}
     @CMContext = coffeemugg.CMContext.extend({
       require: @require
-      partial: @render
+      partial: @render # TODO refactor to pass and merge @context through.
       staticFile: staticFile
       site: config.site
     })
 
-  # Filename can be relative.
+  # Returns the module
+  # - filename:   Relative file path, without the .coffee extension.
   _templateRequire: (filename) ->
     # TODO cache
     for templatesDir in @directories
@@ -64,7 +64,6 @@ class exports.Templar
     return tmplModule
 
   # Main render function.
-  #
   # - template:   The template file name.
   # - options:
   #   - layout:   (default null)
