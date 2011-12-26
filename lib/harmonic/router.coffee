@@ -82,17 +82,15 @@ class exports.Route
 
   _extendReqRes: (req, res) ->
     if @templates?
-      # add request-level context values
-      res.renderLayout = (template, options, args...) =>
-        options ||= {}
-        reqContext = {
-          urlFor: @urlFor,
-          req: req,
+      res.render = (template, options={}, args...) =>
+        options.layout ?= 'layouts/default'
+        options.context ||= {}
+        _.defaults options.context, {
+          req: req
+          urlFor: @urlFor
           currentUser: req.session?.user
         }
-        # caller's context overrides everything
-        options.context = _.extend(reqContext, options.context || {})
-        res.reply 200, {status: 'ok'}, @templates.renderLayout(template, options, args...)
+        res.reply 200, {status: 'ok'}, @templates.render(template, options, args...)
 
   toString: =>
     "Route{name:'#{@name}' path:'#{@path}'}"
@@ -186,7 +184,7 @@ class exports.Router
   # - routesData:
   #   - namePrefix:   The keys of routes will be prefixed by "#{routesData.namePrefix}:" (required)
   #   - pathPrefix:   If present, paths in routes will be prepended by this (optional)
-  #   - templates:    If present, res.renderLayout will be set accordingly (optional)
+  #   - templates:    If present, res.render will be provided (optional)
   #   - routes:       An object of {routeName: routeObject, ...}
   extendRoutes: (routesData) =>
     assert.ok(routesData.namePrefix?, "Method extendRoutes expected keyword 'namePrefix'")
@@ -195,9 +193,9 @@ class exports.Router
     defaultData =
       namePrefix: routesData.namePrefix
       pathPrefix: routesData.pathPrefix
-      templates:   routesData.templates
+      templates:  routesData.templates
     for name, route of routesData.routes
-      routeData = _.extend( _.clone(defaultData), route )
+      routeData = _.defaults _.clone(route), defaultData
       routeData.name = name
       route = new exports.Route(this, routeData)
       this.addRoute(route)

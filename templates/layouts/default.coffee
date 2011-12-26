@@ -1,4 +1,5 @@
 exports.template = ->
+  layoutArgs = arguments
   @doctype 5
   @html ->
     @head ->
@@ -9,7 +10,7 @@ exports.template = ->
     @body ->
       @h1 "~<i>!</i> riverpen..."
       @div "#bodyContents", ->
-        @text @render(@template, @context, @args...)
+        @text @partial(@template, context: @context, args: layoutArgs)
 
       if @currentUser
         @div id: 'currentUser', style: "display: none", 'data-id': @currentUser._id, 'data-username': @currentUser.username

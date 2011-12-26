@@ -8,13 +8,13 @@ harmonic = require 'harmonic'
     path: '', fn: (req, res) ->
       switch req.method
         when 'GET'
-          res.renderLayout('index')
+          res.render 'index'
 
   list:
     path: '/list', fn: (req, res) ->
       switch req.method
         when 'GET'
-          res.renderLayout('list', null, [])
+          res.render 'list', args: [[]]
 
   show:
     path: '/show/:pageId', fn: (req, res) ->
@@ -24,13 +24,13 @@ harmonic = require 'harmonic'
             if err?
               console.log err, 'ERR!'
             else
-              res.renderLayout('show', null, page)
+              res.render 'show', args: [page]
 
   create:
     path: '/create', fn: (req, res, {urlFor}) ->
       switch req.method
         when 'GET'
-          res.renderLayout('create')
+          res.render 'create'
         when 'POST'
           Page.create req.body.page, (err, page) ->
             if err?

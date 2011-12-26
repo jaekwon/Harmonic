@@ -12,6 +12,6 @@ harmonic = require 'harmonic'
     path: '/login', fn: (req, res) ->
       switch req.method
         when 'GET'
-          res.renderLayout('login')
+          res.render 'login'
         when 'POST'
-          res.renderLayout('login')
+          res.render 'login'
