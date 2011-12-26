@@ -49,10 +49,10 @@ class exports.Route
 
     # create the chain of functions
     @chain = if @wrap then (wrapper.bind(this) for wrapper in @wrap) else []
-    @chain.push(this.fn.bind(this))
+    @chain.push(@fn.bind(this))
 
-  serve: (req, res) =>
-    this._extendReqRes(req, res)
+  serve: (req, res, data) =>
+    @_extendReqRes(req, res)
     chainIndex = 0
     # a wrapper (and <Route>.fn) takes this (actually, nextProxy below) as the third argument.
     next = (req, res) =>
@@ -65,13 +65,23 @@ class exports.Route
         else
           nextCalled = true
         next(req, res)
-      # convenience: set some common keys.
+      # convenience: set some common keys, and `data`.
       nextProxy.router = @router
       nextProxy.urlFor = @urlFor
+      _.extend nextProxy, data
       # call next fn in chain.
-      fn(req, res, nextProxy)
+      result = fn(req, res, nextProxy)
+      if @_isMethodSwitch(result)
+        if not result[req.method]
+          return @router.forward('ERROR/405', req, res, message: "Method #{req.method} not allowed")
+        result[req.method](req, res, nextProxy)
     # start the chain.
     next(req, res)
+
+  # For convenience, <Route>.fn can return an object like
+  #  {GET:, POST:, ...} instead of switching on req.method.
+  _isMethodSwitch: (result) ->
+    (typeof result) == 'object' and _.intersection(_.keys(result), ['GET', 'POST', 'PUT', 'DELETE', 'HEAD']).length > 0
 
   # Just like <Router>.urlFor, except @namePrefix
   # gets prepended if need be.
@@ -105,62 +115,39 @@ class exports.Router
 
   # Main function that serves the request
   serve: (req, res) =>
-    # find matching route
-    [route, path] = this.matchRoute(req.url)
-
-    # find 404 route
-    if not route?
-      [route, path] = this.matchRoute('ERROR/404')
-
-    # no 404 route!
-    if not route?
-      message = "Couldn't match a route for url #{req.url}, and dunno what to do for a 404 error. Create a route for ERROR/404"
-      console.log message
-      res.writeHead 404, message
-      return false
-    req.path = path
-
-    this.forward(req, res, route: route)
+    {path} = require('url').parse(req.url)
+    @forward(path, req, res)
 
   # Forward the request to the route given in options.
-  # - options:
-  #   - path:    Find a route by path
-  #   - name:    Find a route by name
-  #   - route:   Use this route
-  forward: (req, res, options) =>
-    if options.path?
-      # find matching route
-      [route, matched] = this.matchRoute(options.path)
-      if not route?
-        message = "Couldn't match a forwarded route for path #{options.path}"
-        console.log message
-        res.writeHead 404, message
-        return
-    else if options.name?
-      message = "Forwarding route by name not implemented yet"
-      console.log message
-      res.writeHead 404, message
-      return
-    else if options.route?
-      route = options.route
-    else
-      message = "Forwarding option must be one of path/name/route."
-      console.log message
-      res.writeHead 404, message
-      return
+  # - path:     The path to forward to.
+  # - data:     Additional data to pass to the route. (optional)
+  #             e.g.
+  #               @routes = 
+  #                 route1:
+  #                   path: 'PATH1', fn (req, res) ->
+  #                     @router.forward 'PATH2', foo: 'FOO', bar: 'BAR'
+  #                 route2:
+  #                   path: 'PATH2', fn (req, res, {foo, bar, urlFor}) ->
+  #                     ...
+  # Returns true if forwarding succeeded, false 
+  forward: (path, req, res, data) =>
 
-    # finally,
-    route.serve(req, res)
-
-  # Find a matching route
-  # Path can be a url path starting with /, 
-  # or special routes like ERROR/*
-  matchRoute: (path) ->
-    path = path.split('?', 1)
+    # Iterate over @routes and look for a path match.
     for route in @routes
       matched = route.xregexp.exec(path)
-      if matched? then return [route, matched]
-    return [null, undefined]
+      if matched
+        route.serve(req, res, data)
+        return true
+
+    # Couldn't find a route matching the path.
+    if path == 'ERROR/404'
+      message = "Couldn't match a route for url #{req.url}, and dunno what to do for a 404 error. Create a route for ERROR/404"
+      res.writeHead 404, message
+      return false
+    else
+      return @forward 'ERROR/404', req, res, message: "Couldn't find a route matching path: '#{path}'"
+
+    throw new Error, 'should not happen'
 
   # Reverse a named route
   # Looks for a 'rvrs' function,
@@ -198,7 +185,7 @@ class exports.Router
       routeData = _.defaults _.clone(route), defaultData
       routeData.name = name
       route = new exports.Route(this, routeData)
-      this.addRoute(route)
+      @addRoute(route)
 
   addRoute: (route) =>
     if route.name

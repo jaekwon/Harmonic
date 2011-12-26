@@ -5,17 +5,16 @@ harmonic = require 'harmonic'
 
   index:
     path: '/', fn: (req, res) ->
-      switch req.method
-        when 'GET'
-          res.render 'index'
+      GET: ->
+        res.render 'index'
 
   page:
     path: '/p/:page', fn: (req, res) ->
-      switch req.method
-        when 'GET'
-          res.render "pages/#{req.path.page}"
+      GET: ->
+        res.render "pages/#{req.path.page}"
 
   error:
-    path: 'ERROR/:code', fn: (req, res) ->
+    path: 'ERROR/:code', fn: (req, res, {message}) ->
       res.reply Number(req.path.code),
-        {status: 'error'}, templates.render("error#{req.path.code}")
+        {status: 'error', message: message},
+        templates.render('error', args: [req.path.code, message])
