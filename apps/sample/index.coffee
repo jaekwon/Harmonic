@@ -16,21 +16,15 @@ harmonic = require 'harmonic'
         res.render 'list', args: [[]]
 
   show:
-    path: '/show/:pageId', fn: (req, res) ->
+    path: '/show/:pageId', fn: (req, res, {Try}) ->
       GET: ->
-        Page.findOne req.path.pageId, (err, page) ->
-          if err?
-            console.log err, 'ERR!'
-          else
-            res.render 'show', args: [page]
+        Page.findOne {foo: req.path.pageId}, Try (page) ->
+          res.render 'show', args: [page]
 
   create:
-    path: '/create', fn: (req, res, {urlFor}) ->
+    path: '/create', fn: (req, res, {urlFor, Try}) ->
       GET: ->
         res.render 'create'
       POST: ->
-        Page.create req.body.page, (err, page) ->
-          if err?
-            console.log err, 'ERR!'
-          else
-            res.redirect urlFor('show', pageId: page.data._id)
+        Page.create req.body.page, Try (page) ->
+          res.redirect urlFor('show', pageId: page.data._id)

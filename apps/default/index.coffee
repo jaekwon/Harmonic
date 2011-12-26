@@ -1,4 +1,5 @@
 harmonic = require 'harmonic'
+config = require 'config'
 
 @templates = templates = new harmonic.templates.Templar(require, './templates', '../../templates')
 @routes =
@@ -14,7 +15,7 @@ harmonic = require 'harmonic'
         res.render "pages/#{req.path.page}"
 
   error:
-    path: 'ERROR/:code', fn: (req, res, {message}) ->
+    path: 'ERROR/:code', fn: (req, res, {message, error}) ->
       res.reply Number(req.path.code),
         {status: 'error', message: message},
-        templates.render('error', args: [req.path.code, message])
+        templates.render('error', args: [req.path.code, message, error if config.debug])
