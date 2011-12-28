@@ -10,23 +10,6 @@ assert = require 'assert'
 http = require 'http'
 _ = require 'underscore'
 
-do -> # prototype extensions
-
-  _.extend(http.ServerResponse.prototype, {
-    simpleJSON: (code, obj) ->
-      body = new Buffer(JSON.stringify(obj))
-      this.writeHead(code, { 'Content-Type': 'text/json', 'Content-Length': body.length })
-      this.end(body)
-
-    redirect: (url) ->
-      this.writeHead(302, Location: url)
-      this.end()
-
-    reply: (status, headers, data) ->
-      this.writeHead (status || 200), (headers || {status: 'ok'})
-      this.end data
-  })
-
 # Main class.
 # Handles an array of <Route> instances.
 class exports.Router
@@ -57,8 +40,8 @@ class exports.Router
   #                   path: 'PATH1', fn (req, res) ->
   #                     @router.forward 'PATH2', req, res, {foo: 'FOO', bar: 'BAR'}
   #                 route2:
-  #                   path: 'PATH2', fn (req, res, {foo, bar, forward}) ->
-  #                     forward 'PATH3', {baz: 'BAZ'}
+  #                   path: 'PATH2', fn (req, res, $) ->
+  #                     $.forward 'PATH3', {baz: 'BAZ'}
   #                 ...
   # Returns true if forwarding succeeded, false 
   forward: (path, req, res, keys) =>
@@ -207,7 +190,9 @@ class exports.Route
           urlFor: @urlFor
           currentUser: req.session?.user
         }
-        res.reply 200, {status: 'ok'}, @templates.render(template, options, args...)
+        status = options.status ? 200
+        headers = options.headers ? {status: 'ok'}
+        res.reply status, headers, @templates.render(template, options, args...)
 
   _extendKeys: (req, res, moreKeys) ->
     keys =
@@ -231,3 +216,19 @@ class exports.Route
 
   toString: =>
     "Route{name:'#{@name}' path:'#{@path}'}"
+
+# Prototype extensions
+_.extend(http.ServerResponse.prototype, {
+  simpleJSON: (code, obj) ->
+    body = new Buffer(JSON.stringify(obj))
+    this.writeHead(code, { 'Content-Type': 'text/json', 'Content-Length': body.length })
+    this.end(body)
+
+  redirect: (url) ->
+    this.writeHead(302, Location: url)
+    this.end()
+
+  reply: (status, headers, data) ->
+    this.writeHead (status ? 200), (headers ? {status: 'ok'})
+    this.end data
+})

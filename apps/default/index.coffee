@@ -15,7 +15,11 @@ config = require 'config'
         res.render "pages/#{req.path.page}"
 
   error:
-    path: 'ERROR/:code', fn: (req, res, {message, error}) ->
+    path: 'ERROR/:code', fn: (req, res, $) ->
+      res.reply 'error'
+        status: 200
+        headers: {status: 'error', message: $.message}
+        
       res.reply Number(req.path.code),
-        {status: 'error', message: message},
-        templates.render('error', args: [req.path.code, message, error if config.debug])
+        {status: 'error', message: $.message},
+        templates.render('error', args: [req.path.code, $.message, $.error if config.debug])

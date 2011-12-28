@@ -35,34 +35,6 @@ class exports.Templar
       site: config.site
     })
 
-  # Returns the module
-  # - filename:   Relative file path, without the .coffee extension.
-  _templateRequire: (filename) ->
-    # TODO cache
-    for templatesDir in @directories
-      try
-        path = @require.resolve("#{templatesDir}/#{filename}.coffee")
-        break
-      catch err
-        # pass
-    if not path?
-      throw new Error("Could not find template '#{filename}' given templateDirs #{@directories}")
-
-    # Auto-reloading of templates for developement
-    if config.debug
-      stat = require('fs').statSync(path)
-      if not @templateMtimes[path] or @templateMtimes[path] < stat.mtime
-        logger.info "loading templates/#{filename}.coffee template..."
-        @templateMtimes[path] = stat.mtime
-        delete require.cache[path]
-
-    tmplModule = require(path)
-    # validate this module
-    # TODO cache
-    if not tmplModule.template?
-      throw new Error "The template file #{template} does not export a 'template' coffeemugg function"
-    return tmplModule
-
   # Main render function.
   # - template:   The template file name.
   # - options:
@@ -110,3 +82,31 @@ class exports.Templar
       return if config.debug then throw err else undefined
 
     return html
+
+  # Returns the module
+  # - filename:   Relative file path, without the .coffee extension.
+  _templateRequire: (filename) ->
+    # TODO cache
+    for templatesDir in @directories
+      try
+        path = @require.resolve("#{templatesDir}/#{filename}.coffee")
+        break
+      catch err
+        # pass
+    if not path?
+      throw new Error("Could not find template '#{filename}' given templateDirs #{@directories}")
+
+    # Auto-reloading of templates for developement
+    if config.debug
+      stat = require('fs').statSync(path)
+      if not @templateMtimes[path] or @templateMtimes[path] < stat.mtime
+        logger.info "loading templates/#{filename}.coffee template..."
+        @templateMtimes[path] = stat.mtime
+        delete require.cache[path]
+
+    tmplModule = require(path)
+    # validate this module
+    # TODO cache
+    if not tmplModule.template?
+      throw new Error "The template file #{template} does not export a 'template' coffeemugg function"
+    return tmplModule
