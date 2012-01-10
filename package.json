@@ -15,7 +15,7 @@
     "underscore": ">= 1.2.3",
     "validator": ">= 0.3.7",
     "xregexp": ">= 1.5.0",
-    "fnstuff": "0.0.1alpha1"
+    "cardamom": "0.0.1"
   },
   "devDependencies": {
     "mocha": ">= 0.7.0"

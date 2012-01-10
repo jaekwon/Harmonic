@@ -7,6 +7,7 @@ logger = require('nogg').logger('harmonic.templates')
 coffeemugg = require 'coffeemugg'
 coffeescript = require 'coffee-script'
 assert = require 'assert'
+{Fn} = require 'cardamom'
 _ = require 'underscore'
 
 # a function to add a digest nonce parameter to a static file to help with client cache busting
@@ -38,16 +39,18 @@ class exports.Templar
   # Main render function.
   # - template:   The template file name.
   # - options:
+  #   - template: Another way to pass in the template.
   #   - layout:   (default null)
   #   - context:  Volatile context values like req, bodyTemplate, etc.
   #               NOTE: more static context should be passed in during Templar initialization.
   #   - args:     Arguments to the template function.
   # - args...:    Another way to pass in arguments. (optional)
-  render: (template, options, args...) =>
+  render: Fn '["template"] {options}? args...', (template, options, args...) =>
     assert.ok not (options?.args? and args.length > 0), "In render, options.args and args... should be exclusive, but both were given"
-    layout  = options?.layout
-    context = options?.context  || {}
-    args    = options?.args     || args
+    layout   = options?.layout
+    context  = options?.context  || {}
+    args     = options?.args     || args
+    template ||= options?.template
 
     # either fetch the layout or the template.
     baseTemplate = layout || template

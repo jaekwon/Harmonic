@@ -6,7 +6,7 @@ logger = require('nogg').logger('db.model')
 mongo = require './mongo'
 {deferral} = require '../utils'
 {Validator} = require 'validator'
-{Fn} = require 'fnstuff'
+{Fn} = require 'cardamom'
 _ = require 'underscore'
 
 # Just a wrapper around Validator to handle errors
@@ -45,20 +45,21 @@ class Model
     @v = new ModelValidator(this)
 
   # NOTE: does not validate.
-  save: Fn('[{options}?] [cb->]') (options, cb) ->
+  save: Fn('[{options}?] [cb->]', (options, cb) ->
     this.withCollection (err, coll) =>
       return cb(err) if err? and cb?
       coll.insert @data, (err, it) =>
         cb(err, if err? undefined else this) if cb?
+  )
 
   # NOTE: does not validate.
-  @create: Fn('{data} [{options}?] [cb->]') (data, options, cb) ->
+  @create: Fn '{data} [{options}?] [cb->]', (data, options, cb) ->
     rec = new this(data)
     rec.save(options, cb)
 
   # Get the underlying collection
   # - cb:    (err, coll) -> ...
-  @withCollection: Fn('[{options}?] cb->') (options, cb) ->
+  @withCollection: Fn '[{options}?] cb->', (options, cb) ->
     if not this::collection?
       throw new Error("Collection not defined for model '#{this}'")
     mongo.withCollection _.extend({collection: this::collection}, options), cb
@@ -67,7 +68,7 @@ class Model
   # You can override the collection of a model instance
   #  by setting <Model>.collection .
   # - cb:    (err, coll) -> ...
-  withCollection: Fn('[{options}?] cb->') (options, cb) ->
+  withCollection: Fn '[{options}?] cb->', (options, cb) ->
     if not this.collection?
       throw new Error("Collection not defined for instance '#{this}'")
     mongo.withCollection _.extend({collection: this.collection}, options), cb

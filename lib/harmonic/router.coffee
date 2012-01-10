@@ -8,6 +8,7 @@ logger = require('nogg').logger('harmonic.router')
 XRegExp = require 'xregexp'
 assert = require 'assert'
 http = require 'http'
+{Fn} = require 'cardamom'
 _ = require 'underscore'
 
 # Main class.
@@ -182,7 +183,7 @@ class exports.Route
 
   _extendReqRes: (req, res) ->
     if @templates?
-      res.render = (template, options={}, args...) =>
+      res.render = Fn '["template"] {options}? args...', (template, options={}, args...) =>
         options.layout ?= 'layouts/default'
         options.context ||= {}
         _.defaults options.context, {
@@ -200,8 +201,7 @@ class exports.Route
       urlFor:   @urlFor
       forward:  (path, keys) => @router.forward(path, req, res, keys)
       self:     this
-      # TODO refactor out, unify with the default way of handling errors in connect.
-      Try:      (fn) =>
+      try:      (fn) =>
                   (err, args...) =>
                     if err?
                       @router.forward('ERROR/500', req, res, error: err, message: 'Internal Error!')

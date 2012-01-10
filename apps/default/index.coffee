@@ -16,10 +16,8 @@ config = require 'config'
 
   error:
     path: 'ERROR/:code', fn: (req, res, $) ->
-      res.reply 'error'
-        status: 200
-        headers: {status: 'error', message: $.message}
-        
-      res.reply Number(req.path.code),
-        {status: 'error', message: $.message},
-        templates.render('error', args: [req.path.code, $.message, $.error if config.debug])
+      res.render
+        template: 'error'
+        status:   Number(req.path.code),
+        headers:  {status: 'error', message: $.message}
+        args:     [req.path.code, $.message, $.error if config.debug]
