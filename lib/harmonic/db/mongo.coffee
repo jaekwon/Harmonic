@@ -19,7 +19,7 @@ do ->
 _server = undefined
 
 # Get Server
-exports.withServer = withServer = (options, callback) ->
+@withServer = withServer = (options, callback) ->
   if not _server?
     mongolianLogger = require('nogg').logger('harmonic.db.mongolian')
     _server = new Mongolian(config.database.serverUri,
@@ -34,7 +34,7 @@ exports.withServer = withServer = (options, callback) ->
 # Get Collection
 # - options:
 #   - collection: 'dbname.collname', or just 'collname'
-exports.withCollection = withCollection = (options, callback) ->
+@withCollection = withCollection = (options, callback) ->
   {collection} = options
   if '.' in collection
     [dbName, collName] = collection.split '.'
@@ -48,7 +48,7 @@ exports.withCollection = withCollection = (options, callback) ->
 
 # Close all databases.
 # You need to call this for your program to exit.
-exports.shutdown = ->
+@shutdown = ->
   withServer null, (err, server) ->
     server.close()
     logger.info "All mongo db connections shut down!"
@@ -57,7 +57,7 @@ exports.shutdown = ->
 # model:          A subclass of Model
 #   collection:   The name of the collection
 #   index:        List of ensureIndex args
-exports.ensureIndicesFor = (model, callback) ->
+@ensureIndicesFor = (model, callback) ->
   if model.index?
     indexOptions = model.index
     if indexOptions instanceof Array
@@ -72,5 +72,5 @@ exports.ensureIndicesFor = (model, callback) ->
     callback(null)
 
 # BSON types
-for key in ['Long', 'ObjectId', 'Timestamp', 'Binary', 'DBRef', 'Code']
-  exports[key] = Mongolian[key]
+for key in ['Long', 'ObjectId', 'Timestamp', 'DBRef'] # Binary, Code deprecated for now.
+  @[key] = Mongolian[key]

@@ -8,7 +8,7 @@ exports.template = ->
       @script type: 'text/javascript', src: @staticFile("jquery/jquery.min.js")
 
     @body ->
-      @h1 "~<i>!</i> riverpen..."
+      @h1 "harmonic"
       @div "#bodyContents", ->
         @text @partial(@template, context: @context, args: layoutArgs)
 

@@ -75,7 +75,9 @@ class exports.Router
       return @namedRoutes[name].rvrs.call(kwargs)
     else
       xregexp = @namedRoutes[name].xregexp
-      assert.deepEqual(_.keys(kwargs).sort(), (xregexp._xregexp.captureNames || []).sort(), "capture names don't match")
+      expectedNames = (xregexp._xregexp.captureNames || []).sort()
+      kwargNames = _.keys(kwargs).sort()
+      assert.deepEqual(kwargNames, expectedNames, "Path capture names don't match for route. Expected: [#{expectedNames.join ','}], got: [#{kwargNames.join ','}]")
       reversed = xregexp._xregexp.source
       if reversed[0] == '^' then reversed = reversed[1...]
       if reversed[reversed.length-1] == '$' then reversed = reversed[...reversed.length-1]
@@ -183,7 +185,7 @@ class exports.Route
 
   _extendReqRes: (req, res) ->
     if @templates?
-      res.render = Fn '["template"] {options}? args...', (template, options={}, args...) =>
+      res.render = Fn '["template"?] {options}? args...', (template, options={}, args...) =>
         options.layout ?= 'layouts/default'
         options.context ||= {}
         _.defaults options.context, {

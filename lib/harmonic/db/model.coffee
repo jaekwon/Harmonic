@@ -6,7 +6,7 @@ logger = require('nogg').logger('db.model')
 mongo = require './mongo'
 {deferral} = require '../utils'
 {Validator} = require 'validator'
-{Fn} = require 'cardamom'
+{Bnd, Bind, Fn} = require 'cardamom'
 _ = require 'underscore'
 
 # Just a wrapper around Validator to handle errors
@@ -26,10 +26,15 @@ class ModelValidator extends Validator
 # 1. override collection
 # 2. override the validate function
 # NOTE: the validate function does not get called automatically
-class Model
+class @Model
+  bnd = new Bnd this
 
-  # so we know that subclasses inherit from Model
-  _modelPrototype: 'epytotorPlodem_'
+  constructor: (@data) ->
+    bnd.to this
+    # fieldname -> error
+    # for generic, null -> error
+    @errors = {}
+    @v = new ModelValidator(this)
 
   # override in your subclass
   collection: undefined
@@ -38,19 +43,24 @@ class Model
   validate: ->
     # e.g. @v.checkField('text').len(3, 1024)
 
-  constructor: (@data) ->
-    # fieldname -> error
-    # for generic, null -> error
-    @errors = {}
-    @v = new ModelValidator(this)
-
   # NOTE: does not validate.
-  save: Fn('[{options}?] [cb->]', (options, cb) ->
+  save: bnd Fn '[{options}?] [cb->]', (options, cb) ->
     this.withCollection (err, coll) =>
       return cb(err) if err? and cb?
       coll.insert @data, (err, it) =>
         cb(err, if err? undefined else this) if cb?
-  )
+
+  # Get the underlying collection (instance method)
+  # You can override the collection of a model instance
+  #  by setting <Model>.collection .
+  # - cb:    (err, coll) -> ...
+  withCollection: bnd Fn '[{options}?] cb->', (options, cb) ->
+    if not this.collection?
+      throw new Error("Collection not defined for instance '#{this}'")
+    mongo.withCollection _.extend({collection: this.collection}, options), cb
+
+  toString: ->
+    "<#{@constructor.name}>"
 
   # NOTE: does not validate.
   @create: Fn '{data} [{options}?] [cb->]', (data, options, cb) ->
@@ -63,15 +73,6 @@ class Model
     if not this::collection?
       throw new Error("Collection not defined for model '#{this}'")
     mongo.withCollection _.extend({collection: this::collection}, options), cb
-
-  # Get the underlying collection (instance method)
-  # You can override the collection of a model instance
-  #  by setting <Model>.collection .
-  # - cb:    (err, coll) -> ...
-  withCollection: Fn '[{options}?] cb->', (options, cb) ->
-    if not this.collection?
-      throw new Error("Collection not defined for instance '#{this}'")
-    mongo.withCollection _.extend({collection: this.collection}, options), cb
 
   # Find query method
   # - query:      The query filter.
@@ -88,9 +89,9 @@ class Model
   #   - count(callback) // ignores skip/limit
   #   - size(callback)  // honors skip/limit
   #   - skip, limit, sort
-  @find: (query, options) ->
+  @find: Fn '{query} [{options}] [callback->]', (query, options={}, callback) ->
     modelClass = this
-    deferral
+    dfrl = deferral
       terminal: ['toArray', 'forEach', 'next', 'count', 'size']
       circular: ['skip', 'limit', 'sort', 'map']
       deferral: (realize) ->
@@ -103,16 +104,20 @@ class Model
           if options.sort?
             cursor = cursor.sort(options.sort)
           # convert pojos to instances of this model
-          cursor = cursor.map (doc) -> new modelClass(doc)
+          cursor = cursor.map (doc) ->
+            new modelClass(doc)
           # do onto cursor what was done onto the deferral
           realize(cursor)
+    if callback?
+      return dfrl.toArray(callback)
+    dfrl
 
   # Find (and expect) just one.
   # - query:    The query filter, or an _id string.
   # - callback: A callback(err, <Model>) ->
   @findOne: (query, callback) ->
     if (typeof query) == 'string'
-      query = {_id: mongo.ObjectId(query)}
+      query = {_id: new mongo.ObjectId(query)}
     @find(query, limit: 2).toArray (err, arr) =>
       if arr.length != 1
         return callback(new Error("#{this}.findOne expected 1 result but got #{arr.length}"), null)
@@ -120,8 +125,3 @@ class Model
 
   @toString: ->
     "class:#{@name}"
-
-  toString: ->
-    "<#{@constructor.name}>"
-
-exports.Model = Model
