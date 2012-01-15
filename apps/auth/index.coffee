@@ -2,16 +2,12 @@
 # Copyright (c) 2011 Jae Kwon 
 #++
 
-harmonic = require 'harmonic'
+{Templar} = require 'harmonic'
 
 @models = {User} = require './models'
-@templates = new harmonic.templates.Templar(require, './templates', '../../templates')
+@templates = new Templar(require, './templates', '../../templates')
 @routes =
 
-  login:
-    path: '/login', fn: (req, res) ->
-      switch req.method
-        when 'GET'
-          res.render 'login'
-        when 'POST'
-          res.render 'login'
+  login: path: '/login', fn:
+    GET: ->
+      @res.render 'login'

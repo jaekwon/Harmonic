@@ -33,7 +33,7 @@ class exports.Router
   #               - forward:  (path, keys)->...
   #               - urlFor:   (name, kwargs)->"url"
   #               - router:   <Router>
-  #               - self:     <Route>
+  #               - route:    <Route>
   #               - Try:      Decorator to forward to ERROR/500 upon errors.
   #             e.g.
   #               @routes = 
@@ -124,7 +124,7 @@ class exports.Route
   #   - path:         A regexp type with :capture tokens. See 'pathPrefix' below.
   #   - rvrs:         A function to construct a path from arguments, used for urlFor. (optional)
   #   - wrap:         Decorators for the fn, much like connect middleware. (optional)
-  #   - fn:           The serving function, gets bound to this <Route>.
+  #   - fn:           The serving function, gets bound to this <Route>. Or an object of {method: fn}
   # (the following are optional, used in apps)
   #   - namePrefix:   Prepended to the name.
   #   - pathPrefix:   Prepended to the path.
@@ -136,9 +136,18 @@ class exports.Route
     @name = "#{@namePrefix}:#{@name}" if @namePrefix
     @xregexp ||= new XRegExp('^'+@path.replace(/:([^\/]+)/g, '(?<$1>[^\/]+)')+'$')
 
+    # support fn as {method: fn}
+    if typeof @fn is 'object'
+      methodFns = @fn
+      @fn = (req, res) ->
+        targetFn = methodFns[req.method]
+        if not targetFn
+          return @router.forward('ERROR/405', req, res, message: "Method #{req.method} not allowed")
+        return targetFn.apply(this, arguments)
+
     # create the chain of functions
-    @chain = if @wrap then (wrapper.bind(this) for wrapper in @wrap) else []
-    @chain.push(@fn.bind(this))
+    @chain = _.clone @wrap or []
+    @chain.push @fn
 
   # Service the req to res for this <Route>.
   # - keys:     Forward-level request keyword arguments. See Router.forward.
@@ -158,17 +167,12 @@ class exports.Route
         else
           nextCalled = true
         next(req, res)
-      # HACK to provide the keys in the third argument.
-      # API may change in the future.
+      # Convenience, keys are also available as the third arg.
+      # NOTE: may get deprecated.
       _.extend nextProxy, keys
       nextProxy.next = nextProxy
       # call next fn in chain.
-      result = fn(req, res, nextProxy)
-      # method-switch convenience.
-      if @_isMethodSwitch(result)
-        if not result[req.method]
-          return @router.forward('ERROR/405', req, res, message: "Method #{req.method} not allowed")
-        result[req.method](req, res, nextProxy)
+      fn.call(keys, req, res, nextProxy)
 
     # start the chain.
     next(req, res)
@@ -179,9 +183,6 @@ class exports.Route
     if ':' not in name
       name = "#{@namePrefix}:#{name}"
     @router.urlFor(name, kwargs)
-
-  _isMethodSwitch: (result) ->
-    (typeof result) == 'object' and _.intersection(_.keys(result), ['GET', 'POST', 'PUT', 'DELETE', 'HEAD']).length > 0
 
   _extendReqRes: (req, res) ->
     if @templates?
@@ -199,10 +200,12 @@ class exports.Route
 
   _extendKeys: (req, res, moreKeys) ->
     keys =
+      req:      req
+      res:      res
+      route:    this
       router:   @router
       urlFor:   @urlFor
       forward:  (path, keys) => @router.forward(path, req, res, keys)
-      self:     this
       try:      (fn) =>
                   (err, args...) =>
                     if err?
