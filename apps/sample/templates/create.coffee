@@ -5,10 +5,10 @@ exports.template = ->
     # TODO: change this  to use ...
     @form method: 'POST', action: @urlFor('sample:create'), ->
       @label for: 'title', 'title'
-      @input id: 'title', type: 'text', name: 'page[title]'
+      @input '#title', type: 'text', name: 'page[title]'
       @br()
       @label for: 'text', 'text'
-      @textarea id: 'text', name: 'page[text]'
+      @textarea '#text', name: 'page[text]'
       @br()
       @label for: 'submit', 'submit'
-      @input id: 'submit', type: 'submit', value: 'submit'
+      @input '#submit', type: 'submit', value: 'submit'

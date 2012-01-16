@@ -10,7 +10,7 @@
     "coffee-script": "git://github.com/jaekwon/coffee-script.git",
     "coffeemugg": ">= 0.0.3",
     "hashlib": ">= 1.0.1",
-    "mongolian": ">= 0.1.15",
+    "mongolian": ">= 0.1.16",
     "nogg": ">= 0.0.3",
     "underscore": ">= 1.2.3",
     "validator": ">= 0.3.7",

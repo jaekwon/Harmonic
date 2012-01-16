@@ -1,5 +1,5 @@
 exports.template = ->
-  @text "Login In"
+  @h2 "Log in"
 
   @form method: 'POST', action: @urlFor('auth:login'), ->
     @label for: 'username', 'username'
@@ -8,5 +8,6 @@ exports.template = ->
     @label for: 'password', 'password'
     @textarea name: 'password'
     @br()
-    @label for: 'submit', 'submit'
     @input type: 'submit', value: 'submit'
+
+  @a href: @urlFor('auth:signup'), 'Sign up'

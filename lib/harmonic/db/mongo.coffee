@@ -64,12 +64,15 @@ _server = undefined
       [index, options] = indexOptions
     else
       [index, options] = [indexOptions, null]
-    withCollection {collection: model.collection}, (err, collection) ->
+    withCollection {collection: model::collection}, (err, collection) ->
       return callback(err) if err?
       collection.ensureIndex index, options, (err) ->
-        callback(null, model.name)
+        callback null, model.name
   else
-    callback(null)
+    # HACK to get around https://github.com/marcello3d/node-mongolian/pull/67
+    withCollection {collection: model::collection}, (err, collection) ->
+      collection.indexes (err, indexes) ->
+        callback null
 
 # BSON types
 for key in ['Long', 'ObjectId', 'Timestamp', 'DBRef'] # Binary, Code deprecated for now.

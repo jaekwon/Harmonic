@@ -205,6 +205,7 @@ class exports.Route
       route:    this
       router:   @router
       urlFor:   @urlFor
+      error:    (code, keys) => @router.forward('ERROR/'+code, req, res, keys)
       forward:  (path, keys) => @router.forward(path, req, res, keys)
       try:      (fn) =>
                   (err, args...) =>

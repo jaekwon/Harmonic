@@ -1,5 +1,4 @@
 {Templar} = require 'harmonic'
-
 @models = {Page} = require('./models')
 @templates = new Templar(require, './templates', '../../templates')
 @pathPrefix = '/sample'
