@@ -1,4 +1,5 @@
 {Templar} = require 'harmonic'
+
 @models = {Page} = require('./models')
 @templates = new Templar(require, './templates', '../../templates')
 @pathPrefix = '/sample'
@@ -23,4 +24,4 @@
       @res.render 'create'
     POST: ->
       Page.create @req.body.page, @try (page) =>
-        @res.redirect @urlFor('show', id: page.data._id)
+        @res.redirect @urlFor 'show', id: page.data._id

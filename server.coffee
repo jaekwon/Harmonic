@@ -10,7 +10,7 @@ http = require 'http'
 logger = require('nogg').logger('app')
 _ = require 'underscore'
 
-# TODO move to an init script
+# init-script
 if config.catchUncaughtErrors
   process.on 'uncaughtException', (err) ->
     logger.error "________________"
@@ -19,19 +19,19 @@ if config.catchUncaughtErrors
     logger.error err.stack
     logger.error "^^^^^^^^^^^^^^^^"
 
-# create router
+# Create router
 router = new harmonic.Router()
+middlewares = []
 
-# add applications
+# Add applications
 for appname, apploc of config.apps
-  do (appname, apploc) ->
-    app = require(apploc)
-    routesData = {namePrefix: appname}
-    _.extend(routesData, require(apploc))
-    router.extendRoutes(routesData)
+  app = require apploc
+  routesData = _.extend {namePrefix: appname}, app
+  router.extendRoutes routesData
+  middlewares.push app.middleware if app.middleware?
 
-# init server
-http.createServer(connect()
+# Init connect
+c = connect()
   .use(connect.logger())
   .use(connect.staticCache())
   .use('/static', connect.static(__dirname + '/static'))
@@ -40,8 +40,13 @@ http.createServer(connect()
   .use(connect.session({ cookie: { maxAge: 1000*60*60*24*30 }}))
   .use(connect.query())
   .use(connect.bodyParser())
-  .use(require('apps/auth/middleware')()) # TODO consider auto-installation of middleware
-  .use(router.serve)
-).listen(config.server.port, config.server.host)
+# connect app middlewares
+c.use(mw) for mw in middlewares
+# connect router
+c.use(router.serve)
+
+# Init server
+http.createServer(c)
+  .listen(config.server.port, config.server.host)
 
 logger.info "Server running at http://#{config.server.host}:#{config.server.port}"

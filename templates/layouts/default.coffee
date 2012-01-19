@@ -9,8 +9,12 @@ exports.template = ->
 
     @body ->
       @h1 "harmonic"
+      if @req.user?
+        @text @h(@req.user.data.username)
+      else
+        @a href: @urlFor('auth:login'), 'Log in'
       @div "#bodyContents", ->
         @text @partial(@template, context: @context, args: layoutArgs)
 
-      if @currentUser
-        @div id: 'currentUser', style: "display: none", 'data-id': @currentUser._id, 'data-username': @currentUser.username
+      if @user
+        @div id: 'user', style: "display: none", 'data-id': @user._id, 'data-username': @user.username

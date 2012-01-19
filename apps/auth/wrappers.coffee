@@ -1,4 +1,4 @@
-exports.requireLogin = (req, res, next) ->
-  if not req.session?.user?
+@requireLogin = (kwargs, next) ->
+  if not @req.user?
     return @error 404, message: 'Unauthorized'
-  console.log "WTF"
+  return next()

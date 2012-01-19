@@ -4,9 +4,21 @@
 
 {Templar} = require 'harmonic'
 
+@middleware = (req, res, next) ->
+  req.user = new User(req.session.user) if req.session.user?
+  next()
 @models = {User} = require './models'
 @templates = new Templar(require, './templates', '../../templates')
 @routes =
+
+  signup: path: '/signup', fn:
+    GET: ->
+      @res.render 'signup'
+    POST: ->
+      User.create @req.body.user, @try (user) =>
+        @req.session.user = user.data
+        @req.session.loginDate = new Date()
+        @res.redirect @urlFor 'default:index'
 
   login: path: '/login', fn:
     GET: ->
@@ -14,11 +26,6 @@
     POST: ->
       @res.render 'login'
 
-  signup: path: '/signup', fn:
-    GET: ->
-      @res.render 'signup'
-    POST: ->
-      User.create @req.body.user, @try (user) =>
-        # TODO log in to session
-        console.log "Created user #{user}!"
-        @res.redirect @urlFor 'default:index'
+  logout: path: '/logout', fn: ->
+    delete @req.session.user
+    @res.redirect @urlFor 'default:index'

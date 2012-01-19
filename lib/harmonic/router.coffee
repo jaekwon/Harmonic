@@ -28,31 +28,17 @@ class exports.Router
 
   # Forward the request to the route given by the path.
   # - path:     The path to forward to.
-  # - keys:     Forward-level request keyword arguments.
-  #             The following keys are provided for convenience and are reserved.
-  #               - forward:  (path, keys)->...
-  #               - urlFor:   (name, kwargs)->"url"
-  #               - router:   <Router>
-  #               - route:    <Route>
-  #               - Try:      Decorator to forward to ERROR/500 upon errors.
-  #             e.g.
-  #               @routes = 
-  #                 route1:
-  #                   path: 'PATH1', fn (req, res) ->
-  #                     @router.forward 'PATH2', req, res, {foo: 'FOO', bar: 'BAR'}
-  #                 route2:
-  #                   path: 'PATH2', fn (req, res, $) ->
-  #                     $.forward 'PATH3', {baz: 'BAZ'}
-  #                 ...
+  # - kwargs:   Forward-level request keyword arguments.
   # Returns true if forwarding succeeded, false 
-  forward: (path, req, res, keys) =>
+  # NOTE: kwargs may get modified, say, by a wrapper function
+  forward: (path, req, res, kwargs={}) =>
 
     # Iterate over @routes and look for a path match.
     for route in @routes
       matched = route.xregexp.exec(path)
       if matched
         req.path = matched
-        route.serve(req, res, keys)
+        route.serve(req, res, kwargs)
         return true
 
     # Couldn't find a route matching the path.
@@ -124,7 +110,7 @@ class exports.Route
   #   - path:         A regexp type with :capture tokens. See 'pathPrefix' below.
   #   - rvrs:         A function to construct a path from arguments, used for urlFor. (optional)
   #   - wrap:         Decorators for the fn, much like connect middleware. (optional)
-  #   - fn:           The serving function, gets bound to this <Route>. Or an object of {method: fn}
+  #   - fn:           The serving function, gets bound to this <Route>. Or an object of {METHOD: fn}
   # (the following are optional, used in apps)
   #   - namePrefix:   Prepended to the name.
   #   - pathPrefix:   Prepended to the path.
@@ -139,10 +125,10 @@ class exports.Route
     # support fn as {method: fn}
     if typeof @fn is 'object'
       methodFns = @fn
-      @fn = (req, res) ->
-        targetFn = methodFns[req.method]
+      @fn = ->
+        targetFn = methodFns[@req.method]
         if not targetFn
-          return @router.forward('ERROR/405', req, res, message: "Method #{req.method} not allowed")
+          return @router.forward('ERROR/405', @req, @res, message: "Method #{req.method} not allowed")
         return targetFn.apply(this, arguments)
 
     # create the chain of functions
@@ -150,29 +136,45 @@ class exports.Route
     @chain.push @fn
 
   # Service the req to res for this <Route>.
-  # - keys:     Forward-level request keyword arguments. See Router.forward.
-  serve: (req, res, keys) =>
+  # Keys bound to this (@):
+  #   - req
+  #   - res
+  #   - forward:  (path, kwargs)-> ...
+  #   - error:    (code, kwargs)-> ...
+  #   - urlFor:   (name, kwargs)->"url"
+  #   - router:   <Router>
+  #   - route:    <Route>
+  #   - try:      Decorator to forward to ERROR/500 upon errors.
+  # e.g.
+  #   @routes = 
+  #     route1: path: 'PATH1', fn: ->
+  #         @router.forward 'PATH2', req, res, {foo: 'FOO', bar: 'BAR'}
+  #     route2: path: 'PATH2', fn: ({foo, bar}) ->
+  #         @res.render 'myTemplate', foo, bar
+  #     ...
+  # NOTE: kwargs may get modified, say, by a wrapper function
+  serve: (req, res, kwargs={}) =>
     @_extendReqRes(req, res)
-    keys = @_extendKeys(req, res, keys)
+    keys = @_getKeys(req, res)
 
     # Construct a portal function 'next' through the wrapper chain.
     chainIndex = 0
-    next = (req, res) =>
+    next = () =>
       fn = @chain[chainIndex++]
-      # ensure that 'next' only gets called once per chain fn, using a proxy fn.
-      nextCalled = false
-      nextProxy = (req, res) =>
-        if nextCalled
-          throw new Error "'next' called more than once for route '#{@name}' in chain #0+#{chainIndex-1}"
-        else
-          nextCalled = true
-        next(req, res)
-      # Convenience, keys are also available as the third arg.
-      # NOTE: may get deprecated.
-      _.extend nextProxy, keys
-      nextProxy.next = nextProxy
-      # call next fn in chain.
-      fn.call(keys, req, res, nextProxy)
+      if chainIndex < @chain.length
+        # ensure that 'next' only gets called once per chain fn, using a proxy fn.
+        nextCalled = false
+        nextProxy = (req, res) =>
+          if nextCalled
+            throw new Error "'next' called more than once for route '#{@name}' in chain #0+#{chainIndex-1}"
+          else
+            nextCalled = true
+          next()
+        # call next wrapper fn in chain
+        fn.call(keys, kwargs, nextProxy)
+      else
+        # call the fn
+        fn.call(keys, kwargs)
 
     # start the chain.
     next(req, res)
@@ -192,33 +194,27 @@ class exports.Route
         _.defaults options.context, {
           req: req
           urlFor: @urlFor
-          currentUser: req.session?.user
         }
         status = options.status ? 200
         headers = options.headers ? {status: 'ok'}
         res.reply status, headers, @templates.render(template, options, args...)
 
-  _extendKeys: (req, res, moreKeys) ->
+  _getKeys: (req, res) ->
     keys =
       req:      req
       res:      res
       route:    this
       router:   @router
       urlFor:   @urlFor
-      error:    (code, keys) => @router.forward('ERROR/'+code, req, res, keys)
-      forward:  (path, keys) => @router.forward(path, req, res, keys)
+      error:    (code, kwargs) => @router.forward('ERROR/'+code, req, res, kwargs)
+      forward:  (path, kwargs) => @router.forward(path, req, res, kwargs)
       try:      (fn) =>
                   (err, args...) =>
                     if err?
                       @router.forward('ERROR/500', req, res, error: err, message: 'Internal Error!')
                     else
                       fn(args...)
-    # extend with moreKeys and check for duplicate keys.
-    for key, value of moreKeys
-      if keys[key]?
-        throw new Error "The key '#{key}' is reserved for Routes"
-      keys[key] = value
-    return keys
+    keys
 
   toString: =>
     "Route{name:'#{@name}' path:'#{@path}'}"
