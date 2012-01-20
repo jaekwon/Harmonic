@@ -53,27 +53,6 @@ _server = undefined
     server.close()
     logger.info "All mongo db connections shut down!"
 
-# Ensure indices for all the given model
-# model:          A subclass of Model
-#   collection:   The name of the collection
-#   index:        List of ensureIndex args
-@ensureIndicesFor = (model, callback) ->
-  if model.index?
-    indexOptions = model.index
-    if indexOptions instanceof Array
-      [index, options] = indexOptions
-    else
-      [index, options] = [indexOptions, null]
-    withCollection {collection: model::collection}, (err, collection) ->
-      return callback(err) if err?
-      collection.ensureIndex index, options, (err) ->
-        callback null, model.name
-  else
-    # HACK to get around https://github.com/marcello3d/node-mongolian/pull/67
-    withCollection {collection: model::collection}, (err, collection) ->
-      collection.indexes (err, indexes) ->
-        callback null
-
 # BSON types
 for key in ['Long', 'ObjectId', 'Timestamp', 'DBRef'] # Binary, Code deprecated for now.
   @[key] = Mongolian[key]

@@ -7,6 +7,7 @@ mongo = require './mongo'
 {deferral} = require '../utils'
 {Validator} = require 'validator'
 {Bnd, Bind, Fn} = require 'cardamom'
+async = require 'async'
 _ = require 'underscore'
 
 # Just a wrapper around Validator to handle errors
@@ -37,7 +38,14 @@ class @Model
     @v = new ModelValidator(this)
 
   # override in your subclass
-  collection: undefined
+  @collection: undefined
+
+  # helper to declare indices
+  @index: (index, options=undefined) ->
+    if @indices?.class isnt this
+      @indices ||= []
+      @indices.class = this
+    @indices.push index: index, options: options
 
   # override in your subclass
   validate: ->
@@ -45,19 +53,10 @@ class @Model
 
   # NOTE: does not validate.
   save: bnd Fn '[{options}?] [cb->]', (options, cb) ->
-    this.withCollection (err, coll) =>
+    this.constructor.withCollection (err, coll) =>
       return cb(err) if err? and cb?
       coll.insert @data, (err, it) =>
         cb(err, if err? undefined else this) if cb?
-
-  # Get the underlying collection (instance method)
-  # You can override the collection of a model instance
-  #  by setting <Model>.collection .
-  # - cb:    (err, coll) -> ...
-  withCollection: bnd Fn '[{options}?] cb->', (options, cb) ->
-    if not this.collection?
-      throw new Error("Collection not defined for instance '#{this}'")
-    mongo.withCollection _.extend({collection: this.collection}, options), cb
 
   toString: ->
     "<#{@constructor.name}>"
@@ -70,9 +69,9 @@ class @Model
   # Get the underlying collection
   # - cb:    (err, coll) -> ...
   @withCollection: Fn '[{options}?] cb->', (options, cb) ->
-    if not this::collection?
+    if not @collection?
       throw new Error("Collection not defined for model '#{this}'")
-    mongo.withCollection _.extend({collection: this::collection}, options), cb
+    mongo.withCollection _.extend({collection: @collection}, options), cb
 
   # Find query method
   # - query:      The query filter.
@@ -90,12 +89,11 @@ class @Model
   #   - size(callback)  // honors skip/limit
   #   - skip, limit, sort
   @find: Fn '{query} [{options}] [callback->]', (query, options={}, callback) ->
-    modelClass = this
     dfrl = deferral
       terminal: ['toArray', 'forEach', 'next', 'count', 'size']
       circular: ['skip', 'limit', 'sort', 'map']
-      deferral: (realize) ->
-        modelClass.withCollection (err, coll) ->
+      deferral: (realize) =>
+        @withCollection (err, coll) =>
           cursor = coll.find(query, options.fields)
           if options.limit?
             cursor = cursor.limit(options.limit)
@@ -104,8 +102,8 @@ class @Model
           if options.sort?
             cursor = cursor.sort(options.sort)
           # convert pojos to instances of this model
-          cursor = cursor.map (doc) ->
-            new modelClass(doc)
+          cursor = cursor.map (doc) =>
+            new @(doc)
           # do onto cursor what was done onto the deferral
           realize(cursor)
     if callback?
@@ -125,3 +123,21 @@ class @Model
 
   @toString: ->
     "class:#{@name}"
+
+  # Ensure indices, as defined optionally by (Model).indices,
+  @ensureIndices: (callback) ->
+
+    if not @indices?
+      # HACK to get around https://github.com/marcello3d/node-mongolian/pull/67
+      @withCollection {collection: @collection}, (err, collection) ->
+        collection.indexes (err, indexes) ->
+          callback null
+      return
+
+    async.forEachSeries @indices, (inOp, next) =>
+      @withCollection {collection: @collection}, (err, collection) =>
+        return callback(err) if err?
+        collection.ensureIndex inOp.index, inOp.options, (err) ->
+          next(err)
+    , (err) ->
+      callback err

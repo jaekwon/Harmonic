@@ -21,8 +21,8 @@ task 'mongo', ->
 
   # Foreach models ensure indices for these models
   async.forEachSeries models, (model, next) ->
-    log "Ensuring index for #{model.name}..."
-    harmonic.db.mongo.ensureIndicesFor model, next
+    log "Ensuring indices for #{model.name}..."
+    model.ensureIndices next
 
   # Finally,
   ,(err, results) ->
