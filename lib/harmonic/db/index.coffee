@@ -1,3 +1,5 @@
-exports.mongo = require './mongo'
-exports.model = require './model'
-exports.Model = exports.model.Model
+@mongo = require './mongo'
+@model = require './model'
+
+@Model = @model.Model
+@ValidationError = @model.ValidationError

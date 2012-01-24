@@ -10,4 +10,8 @@ class exports.User extends harmonic.db.Model
   @index {username: 1}, {unique: true}
 
   validate: ->
-    # e.g. @v.checkField('text').len(3, 1024)
+    @v.checkField('text').len(100,102)
+
+  @on 'beforeCreate', (user, options) ->
+    user.validate()
+    throw new harmonic.db.ValidationError user.errors if user.errors

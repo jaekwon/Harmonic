@@ -8,33 +8,25 @@ mongo = require './mongo'
 {Validator} = require 'validator'
 {Bnd, Bind, Fn} = require 'cardamom'
 async = require 'async'
+{ErrorBase, eventful} = require 'cardamom'
+{EventEmitter} = require 'events'
 _ = require 'underscore'
-
-# Just a wrapper around Validator to handle errors
-# without throwing anything
-class ModelValidator extends Validator
-  constructor: (@model) ->
-  error: (msg) ->
-    (@model.errors[@fieldname] ||= []).push(msg)
-  checkField: (@fieldname, message) ->
-    return this.check(@model.data[@fieldname], message)
-  checkOther: (value, message) ->
-    @fieldname = null
-    return this.check(value, message)
 
 # A very light model base class around MongoDB.
 # It's meant to be subclassed.
 # 1. override collection
 # 2. override the validate function
 # NOTE: the validate function does not get called automatically
-class @Model
+class @Model extends EventEmitter
+  eventful this
   bnd = new Bnd this
 
   constructor: (@data) ->
     bnd.to this
-    # fieldname -> error
-    # for generic, null -> error
-    @errors = {}
+    # { fieldname: [error...] } if there is an error.
+    # for generic, { null: [error...] }
+    # null, if no errors.
+    @errors = null
     @v = new ModelValidator(this)
 
   # override in your subclass
@@ -53,10 +45,39 @@ class @Model
 
   # NOTE: does not validate.
   save: bnd Fn '[{options}?] [cb->]', (options, cb) ->
-    this.constructor.withCollection (err, coll) =>
+
+    # Call beforeCreate, then beforeSave.
+    # Call cb(err) if error,
+    # Fall back to <Model>#error then Model#error.
+    isNew = not @data._id?
+    try
+      try
+        @constructor.emit 'beforeCreate', this, options if isNew
+        @emit 'beforeSave', this, options
+      catch error
+        try return cb error if cb?
+        return @emit 'error', error
+    catch error
+      return @constructor.emit 'error', error
+
+    # Save
+    @constructor.withCollection (err, coll) =>
       return cb(err) if err? and cb?
       coll.insert @data, (err, it) =>
-        cb(err, if err? undefined else this) if cb?
+        return cb err if err?
+
+        # Call cb, then afterSave, then afterCreate.
+        # Stop if any raise an error.
+        # Fall back to <Model>#error, then Model#error.
+        try
+          try
+            cb(null, this) if cb?
+            @emit 'afterSave', this, it
+            @constructor.emit 'afterCreate', this, it if isNew
+          catch error
+            return @emit 'error', error
+        catch error
+          return @constructor.emit 'error', error
 
   toString: ->
     "<#{@constructor.name}>"
@@ -141,3 +162,22 @@ class @Model
           next(err)
     , (err) ->
       callback err
+
+# Just a wrapper around Validator to handle errors
+# without throwing anything
+class ModelValidator extends Validator
+  constructor: (@model) ->
+  error: (msg) ->
+    ( ( @model.errors ||= {} )[@fieldname] ||= [] ).push(msg)
+  checkField: (@fieldname, message) ->
+    return this.check(@model.data[@fieldname], message)
+  checkOther: (value, message) ->
+    @fieldname = null
+    return this.check(value, message)
+
+inspect = require('util').inspect
+class @ValidationError extends ErrorBase
+  #constructor: (@errors) ->
+  #  super(require('util').inspect(@errors))
+  
+  toString: -> "ValidationError:: #{inspect @message}"

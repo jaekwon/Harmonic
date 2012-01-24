@@ -1,4 +1,6 @@
 exports.template = (code, message, error) ->
   @p "ERROR #{code}. #{message}"
   if error
-    @pre @h(error.stack or error)
+    @pre ->
+      @text @h(error)
+      @text @h(error.stack or error)
