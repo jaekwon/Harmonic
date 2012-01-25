@@ -177,7 +177,7 @@ class ModelValidator extends Validator
 
 inspect = require('util').inspect
 class @ValidationError extends ErrorBase
-  #constructor: (@errors) ->
-  #  super(require('util').inspect(@errors))
+  constructor: (@errors) ->
+    super(require('util').inspect(@errors))
   
-  toString: -> "ValidationError:: #{inspect @message}"
+  toString: -> "ValidationError: #{inspect @message}"
