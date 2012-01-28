@@ -6,7 +6,7 @@ logger = require('nogg').logger('db.model')
 mongo = require './mongo'
 {deferral} = require '../utils'
 {Validator} = require 'validator'
-{Bnd, Bind, Fn} = require 'cardamom'
+{B, Fn} = require 'cardamom'
 async = require 'async'
 {ErrorBase, eventful} = require 'cardamom'
 {EventEmitter} = require 'events'
@@ -14,15 +14,11 @@ _ = require 'underscore'
 
 # A very light model base class around MongoDB.
 # It's meant to be subclassed.
-# 1. override collection
-# 2. override the validate function
 # NOTE: the validate function does not get called automatically
 class @Model extends EventEmitter
   eventful this
-  bnd = new Bnd this
 
   constructor: (@data) ->
-    bnd.to this
     # { fieldname: [error...] } if there is an error.
     # for generic, { null: [error...] }
     # null, if no errors.
@@ -44,7 +40,7 @@ class @Model extends EventEmitter
     # e.g. @v.checkField('text').len(3, 1024)
 
   # NOTE: does not validate.
-  save: bnd Fn '[{options}?] [cb->]', (options, cb) ->
+  save:B Fn '[{options}?] [cb->]', (options, cb) ->
 
     # Call beforeCreate, then beforeSave.
     # Call cb(err) if error,
@@ -163,6 +159,8 @@ class @Model extends EventEmitter
     , (err) ->
       callback err
 
+  B.ind @
+
 # Just a wrapper around Validator to handle errors
 # without throwing anything
 class ModelValidator extends Validator
@@ -180,4 +178,4 @@ class @ValidationError extends ErrorBase
   constructor: (@errors) ->
     super(require('util').inspect(@errors))
   
-  toString: -> "ValidationError: #{inspect @message}"
+  toString: -> "ValidationError: #{@message}"

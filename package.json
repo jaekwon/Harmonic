@@ -7,7 +7,7 @@
   "dependencies": {
     "async": ">= 0.1.15",
     "bcrypt": ">= 0.5.0",
-    "cardamom": "0.0.3",
+    "cardamom": "0.0.4",
     "connect": "git://github.com/senchalabs/connect.git",
     "coffee-script": "git://github.com/jaekwon/coffee-script.git",
     "coffeemugg": ">= 0.0.3",
