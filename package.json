@@ -7,15 +7,15 @@
   "dependencies": {
     "async": ">= 0.1.15",
     "bcrypt": ">= 0.5.0",
-    "cardamom": "0.0.4",
-    "connect": "git://github.com/senchalabs/connect.git",
+    "cardamom": "0.0.7b",
+    "connect": ">= 2.0.2",
     "coffee-script": "git://github.com/jaekwon/coffee-script.git",
     "coffeemugg": ">= 0.0.3",
     "hashlib": ">= 1.0.1",
     "mongolian": ">= 0.1.16",
     "nogg": ">= 0.0.3",
     "underscore": ">= 1.2.3",
-    "validator": ">= 0.3.7",
+    "amanda": ">= 0.2.2",
     "xregexp": ">= 1.5.0"
   },
   "devDependencies": {

@@ -1,8 +1,9 @@
 config = require 'config'
 harmonic = require 'harmonic'
+{clazz} = require 'cardamom'
 
-class exports.Page extends harmonic.db.Model
-  @collection: 'page'
+@Page = clazz 'Page', harmonic.db.Model, ->
+  @collection = 'page'
 
   validate: ->
     # e.g. @v.checkField('text').len(3, 1024)
