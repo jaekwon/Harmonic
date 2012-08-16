@@ -1,4 +1,4 @@
-NOTE: I'm open sourcing this code even though I have (temporarily?) abandoned this project. If you want to create a new web framework for CoffeeScript/NodeJS, I recommend you start here.
+NOTE: I'm open sourcing this code even though I have (temporarily?) abandoned this project.
 
 Misc
 ====
