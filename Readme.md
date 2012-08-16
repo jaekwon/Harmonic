@@ -1,4 +1,7 @@
-TODO write something real here.
+NOTE: I'm open sourcing this code even though I have (temporarily?) abandoned this project. If you want to create a new web framework for CoffeeScript/NodeJS, I recommend you start here.
+
+Misc
+====
 
 * apps/sample is just an example app. it's not done.
 * apps/auth is going to be done. it'll be useful.
